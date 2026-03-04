@@ -37,3 +37,30 @@ jobs:
         name: Test dev docker
         run: |
           docker run --rm khulnasoft/pr-insight:test pytest -v tests/unittest
+
+  health-test:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: |
+          export PATH="$HOME/.local/bin:$PATH"
+          uv venv .venv --python 3.12
+          uv pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run health tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          export PYTHONPATH=.
+          .venv/bin/python tests/health_test/main.py

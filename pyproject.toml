@@ -87,6 +87,72 @@ python_functions = ["test_*"]
 addopts = "--color=yes"
 console_output_style = "progress"
 
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+strict_equality = true
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "dynaconf.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "atlassian.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "litellm.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "openai.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "anthropic.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "google.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "azure.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "boto3.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "botocore.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "github.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "gitlab.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "jira.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "gitea.*"
+ignore_missing_imports = true
+
 [tool.uv]
 dev-dependencies = [
     "pytest>=9.0.0",

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:recommended"
+  ],
+  "packageRules": [
+    {
+      "matchPackagePatterns": ["*"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-minor-patch"
+    },
+    {
+      "matchPackagePatterns": ["pip"],
+      "enabled": false
+    }
+  ],
+  "pip_requirements": {
+    "fileMatch": ["requirements.txt", "requirements-dev.txt"]
+  },
+  "github": {
+    "extends": ["github>whitesource/renovate-config:minimal"]
+  }
+}

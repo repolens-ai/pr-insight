@@ -1,0 +1,89 @@
+version: "3.8"
+
+services:
+  pr-insight-cli:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: cli
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+      - GITLAB_TOKEN=${GITLAB_TOKEN}
+      - CONFIG.GIT_PROVIDER=${GIT_PROVIDER:-github}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["python", "-m", "pr_insight.cli", "--pr_url", "https://github.com/owner/repo/pull/1", "review"]
+
+  pr-insight-github-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: github_app
+    ports:
+      - "8000:8000"
+    environment:
+      - GITHUB_APP_ID=${GITHUB_APP_ID}
+      - GITHUB_PRIVATE_KEY=${GITHUB_PRIVATE_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    volumes:
+      - ./pr_insight/settings:/app/pr_insight/settings:ro
+
+  pr-insight-gitlab-webhook:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: gitlab_webhook
+    ports:
+      - "8001:8001"
+    environment:
+      - GITLAB_TOKEN=${GITLAB_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    volumes:
+      - ./pr_insight/settings:/app/pr_insight/settings:ro
+
+  pr-insight-gitea-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: gitea_app
+    ports:
+      - "8002:8002"
+    environment:
+      - GITEA_URL=${GITEA_URL}
+      - GITEA_TOKEN=${GITEA_TOKEN}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    volumes:
+      - ./pr_insight/settings:/app/pr_insight/settings:ro
+
+  pr-insight-test:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: test
+    environment:
+      - PYTHONPATH=/app
+    volumes:
+      - .:/app
+      - ./tests:/app/tests:ro
+    command: ["pytest", "tests/unittest", "-v"]
+
+  pr-insight-dev:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: test
+    environment:
+      - PYTHONPATH=/app
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GITHUB_TOKEN=${GITHUB_TOKEN}
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: ["tail", "-f", "/dev/null"]
+    profiles:
+      - dev

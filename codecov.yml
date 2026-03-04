@@ -1,5 +1,20 @@
-comment: false
+codecov:
+  require_ci_to_pass: false
+
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: false
+
 coverage:
+  precision: 2
+  round: down
+  range: "70...100"
   status:
-    patch: false
-    project: false
+    project:
+      default:
+        target: 70%
+        threshold: 5%
+    patch:
+      default:
+        target: 70%

@@ -1,0 +1,73 @@
+name: VSCode Extension Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'vscode-extension/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'vscode-extension/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'vscode-extension'
+
+      - name: Install Dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Lint
+        working-directory: vscode-extension
+        run: npm run lint
+
+      - name: Compile
+        working-directory: vscode-extension
+        run: npm run compile
+
+      - name: Run Tests
+        working-directory: vscode-extension
+        run: npm run test
+
+  test-vscode:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Dependencies
+        working-directory: vscode-extension
+        run: npm ci
+
+      - name: Compile
+        working-directory: vscode-extension
+        run: npm run compile
+
+      - name: Package Extension
+        working-directory: vscode-extension
+        run: npm run package
+
+      - name: Upload VSIX
+        uses: actions/upload-artifact@v4
+        with:
+          name: vsix-package
+          path: vscode-extension/*.vsix

@@ -1,24 +1,22 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pr-insight"
-version = "0.2.5"
+version = "0.3.1"
 
-authors = [{ name = "KhulnaSoft", email = "info@khulnasoft.com" }]
+authors = [{ name = "RepolensAI", email = "support@khulnasoft.com" }]
 
 maintainers = [
-  { name = "KhulnaSoft, Lab", email = "support@khulnasoft.com" },
-  { name = "Md Abdullah Al-Mamun", email = "iconmamundentist@gmail.com" },
-  { name = "Md Sulaiman", email = "dev.sulaiman@icloud.com" },
+  { name = "Md Sulaiman", email = "admin@khulnasoft.com" },
 ]
 
-description = "KhulnaSoft PR-Insight aims to help efficiently review and handle pull requests, by providing AI feedbacks and suggestions."
+description = "RepolensAI PR-Insight aims to help efficiently review and handle pull requests, by providing AI feedbacks and suggestions."
 readme = "README.md"
 requires-python = ">=3.12"
-keywords = ["AI", "Insights", "Pull Request", "Automation", "Code Review"]
-license = { name = "Apache 2.0", file = "LICENSE" }
+keywords = ["AI", "Agents", "Pull Request", "Automation", "Code Review"]
+license = { file = "LICENSE" }
 
 classifiers = [
   "Intended Audience :: Developers",
@@ -26,16 +24,16 @@ classifiers = [
 ]
 dynamic = ["dependencies"]
 
+
 [tool.setuptools.dynamic]
 dependencies = { file = ["requirements.txt"] }
 
 [project.urls]
-"Homepage" = "https://github.com/KhulnaSoft/pr-insight"
-"Documentation" = "https://pr-insight-docs.khulnasoft.com/"
+"Homepage" = "https://github.com/repolens-ai/pr-insight"
+"Documentation" = "https://repolense-merge-docs.khulnasoft.com/"
 
 [tool.setuptools]
 include-package-data = true
-license-files = ["LICENSE"]
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -47,7 +45,7 @@ include = [
 pr-insight = "pr_insight.cli:run"
 
 [tool.ruff]
-line-length = 209
+line-length = 120
 
 lint.select = [
   "E",    # Pyflakes
@@ -68,15 +66,23 @@ lint.unfixable = [
 
 lint.exclude = ["api/code_completions"]
 
-lint.ignore = ["B008"]
+lint.ignore = ["E999", "B008"]
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = [
   "E402",
-  "E501",
 ] # Ignore `E402` (import violations) in all `__init__.py` files, and in `path/to/file.py`.
 
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101"]
 tests = []
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "--color=yes"
+console_output_style = "progress"

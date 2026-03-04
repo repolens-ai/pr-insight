@@ -1,4 +1,6 @@
-FROM python:3.12.3 AS base
+FROM python:3.12.10-slim AS base
+
+RUN apt update && apt install --no-install-recommends -y git curl && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 ADD pyproject.toml .
@@ -30,6 +32,11 @@ CMD ["python", "pr_insight/servers/gitlab_webhook.py"]
 FROM base AS azure_devops_webhook
 ADD pr_insight pr_insight
 CMD ["python", "pr_insight/servers/azuredevops_server_webhook.py"]
+
+FROM base AS gitea_app
+ADD pr_insight pr_insight
+CMD ["python", "-m", "gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "pr_insight/servers/gunicorn_config.py","pr_insight.servers.gitea_app:app"]
+
 
 FROM base AS test
 ADD requirements-dev.txt .

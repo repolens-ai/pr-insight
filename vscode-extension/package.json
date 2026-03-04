@@ -1,0 +1,254 @@
+{
+  "name": "pr-insight-vscode",
+  "displayName": "PR Insight - AI Code Review",
+  "description": "Bring AI-powered code review intelligence directly into VSCode with local code review and PR insights.",
+  "version": "0.1.0",
+  "publisher": "repolensai",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/repolens-ai/pr-insight-vscode"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "AI",
+    "Code Quality",
+    "Developer Tools"
+  ],
+  "keywords": [
+    "ai",
+    "code review",
+    "pr",
+    "pull request",
+    "linting",
+    "security",
+    "best practices"
+  ],
+  "activationEvents": [
+    "onCommand:pr-insight.reviewFile",
+    "onCommand:pr-insight.reviewWorkspace",
+    "onCommand:pr-insight.analyzeChanges",
+    "onCommand:pr-insight.showSettings",
+    "onLanguage:javascript",
+    "onLanguage:typescript",
+    "onLanguage:python",
+    "onLanguage:java",
+    "onLanguage:go",
+    "onLanguage:rust",
+    "onLanguage:cpp",
+    "onLanguage:c"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "pr-insight.reviewFile",
+        "title": "PR Insight: Review Current File",
+        "category": "PR Insight"
+      },
+      {
+        "command": "pr-insight.reviewWorkspace",
+        "title": "PR Insight: Review Workspace",
+        "category": "PR Insight"
+      },
+      {
+        "command": "pr-insight.analyzeChanges",
+        "title": "PR Insight: Analyze Git Changes",
+        "category": "PR Insight"
+      },
+      {
+        "command": "pr-insight.clearAnnotations",
+        "title": "PR Insight: Clear Annotations",
+        "category": "PR Insight"
+      },
+      {
+        "command": "pr-insight.showSettings",
+        "title": "PR Insight: Open Settings",
+        "category": "PR Insight"
+      },
+      {
+        "command": "pr-insight.runQuickReview",
+        "title": "PR Insight: Quick Review",
+        "category": "PR Insight",
+        "enablement": "editorHasSelection"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "pr-insight.reviewFile",
+          "group": "pr-insight",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "pr-insight.runQuickReview",
+          "group": "pr-insight"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "pr-insight.reviewFile",
+          "group": "pr-insight"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "pr-insight.reviewFile",
+        "key": "ctrl+shift+r",
+        "mac": "cmd+shift+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "pr-insight.runQuickReview",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a",
+        "when": "editorHasSelection"
+      }
+    ],
+    "configuration": {
+      "title": "PR Insight Configuration",
+      "properties": {
+        "pr-insight.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "OpenAI API Key for AI-powered code review"
+        },
+        "pr-insight.model": {
+          "type": "string",
+          "default": "gpt-4",
+          "enum": [
+            "gpt-4",
+            "gpt-4-turbo",
+            "gpt-3.5-turbo",
+            "claude-3-opus",
+            "claude-3-sonnet"
+          ],
+          "description": "AI model to use for code review"
+        },
+        "pr-insight.language": {
+          "type": "string",
+          "default": "en",
+          "description": "Language for review feedback"
+        },
+        "pr-insight.enableInlineAnnotations": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline annotations for code issues"
+        },
+        "pr-insight.enableHoverDetails": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show hover details for code issues"
+        },
+        "pr-insight.reviewOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically review files on save"
+        },
+        "pr-insight.excludePatterns": {
+          "type": "array",
+          "default": [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/.git/**",
+            "**/venv/**",
+            "**/__pycache__/**"
+          ],
+          "description": "File patterns to exclude from review"
+        },
+        "pr-insight.maxFileSize": {
+          "type": "number",
+          "default": 100000,
+          "description": "Maximum file size (in bytes) to review"
+        },
+        "pr-insight.customRules": {
+          "type": "array",
+          "default": [],
+          "description": "Custom rules for code review"
+        },
+        "pr-insight.severityLevels": {
+          "type": "object",
+          "default": {
+            "error": "error",
+            "warning": "warning",
+            "info": "information",
+            "hint": "hint"
+          },
+          "description": "Map severity levels to VSCode diagnostic levels"
+        },
+        "pr-insight.autoScrollToIssue": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically scroll to first issue found"
+        },
+        "pr-insight.showProgress": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show progress notification during review"
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "pr-insight",
+        "owner": "pr-insight",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^\\[([^\\]]+)\\]\\s+(.+):(\\d+):(\\d+):\\s+(error|warning|info)\\s+(.+)$",
+          "severity": 1,
+          "message": 6,
+          "file": 2,
+          "line": 3,
+          "column": 4
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Starting PR Insight analysis...$",
+          "endsPattern": "^Analysis complete\\. Found (\\d+) issues?\\.$"
+        }
+      }
+    ],
+    "languages": [
+      {
+        "id": "pr-insight-review",
+        "extensions": [
+          ".pir"
+        ],
+        "aliases": [
+          "PR Insight Review"
+        ]
+      }
+    ],
+    "grammars": [
+      {
+        "language": "pr-insight-review",
+        "scopeName": "source.pir",
+        "path": "./syntaxes/pr-insight-review.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^2.3.8",
+    "eslint": "^8.55.0",
+    "typescript": "^5.3.3",
+    "vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "axios": "^1.6.2"
+  }
+}

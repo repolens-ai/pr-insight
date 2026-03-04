@@ -2,8 +2,8 @@
 
 ## Dos and Don’ts
 
-- **Do** match the interpreter requirement declared in `pyproject.toml` (Python ≥ 3.12) and install `requirements.txt` plus `requirements-dev.txt` before running tools.
-- **Do** run tests with `PYTHONPATH=.` set to keep imports functional (for example `PYTHONPATH=. ./.venv/bin/pytest tests/unittest/test_fix_json_escape_char.py -q`).
+- **Do** match the interpreter requirement declared in `pyproject.toml` (Python ≥ 3.12) and use **uv** for dependency management (see below).
+- **Do** run tests with `PYTHONPATH=.` set to keep imports functional (for example `PYTHONPATH=. .venv/bin/pytest tests/unittest/test_fix_json_escape_char.py -q`).
 - **Do** adjust configuration through `.pr_insight.toml` or files under `pr_insight/settings/` instead of hard-coding values.
 - **Don’t** commit secrets or access tokens; rely on environment variables as shown in the health and e2e tests.
 - **Don’t** reformat or reorder files globally; match existing 120-character lines, import ordering, and docstring style.
@@ -24,9 +24,15 @@ PR-Insight automates AI-assisted reviews for pull requests across multiple git p
 
 ## Build, Test, and Development Commands
 
-- Create or activate a virtual environment, then install runtime dependencies with `pip install -r requirements.txt`; add development tooling via `pip install -r requirements-dev.txt`.
-- Run a single unit test (verified): `PYTHONPATH=. ./.venv/bin/pytest tests/unittest/test_fix_json_escape_char.py -q`.
-- Run the full unit suite: `PYTHONPATH=. ./.venv/bin/pytest tests/unittest -v`.
+- This project uses **uv** for fast dependency management. Install uv first: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+- Create a virtual environment and install dependencies:
+  ```bash
+  export PATH="$HOME/.local/bin:$PATH"
+  uv venv .venv --python 3.12
+  uv pip install -r requirements.txt -r requirements-dev.txt
+  ```
+- Run a single unit test: `PYTHONPATH=. .venv/bin/pytest tests/unittest/test_fix_json_escape_char.py -q`.
+- Run the full unit suite: `PYTHONPATH=. .venv/bin/pytest tests/unittest -v`.
 - Execute the CLI locally once dependencies and API keys are available: `python -m pr_insight.cli --pr_url <https://host/org/repo/pull/123> review`.
 - Build the test Docker target mirror of CI when containerizing: `docker build -f docker/Dockerfile --target test .` (loads dev dependencies and copies `tests/`).
 - Generate and deploy documentation with MkDocs after installing the same extras as CI (`mkdocs-material`, `mkdocs-glightbox`): `mkdocs serve -f docs/mkdocs.yml` for previews and `mkdocs gh-deploy -f docs/mkdocs.yml` for publication.

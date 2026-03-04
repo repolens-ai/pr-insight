@@ -135,10 +135,16 @@ if __name__ == '__main__':
 git clone https://github.com/repolens-ai/pr-insight.git
 ```
 
-2. Navigate to the `/pr-insight` folder and install the requirements in your favorite virtual environment:
+2. Navigate to the `/pr-insight` folder and install the requirements using uv:
 
 ```bash
-pip install -e .
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
+
+# Create virtual environment and install dependencies
+uv venv .venv --python 3.12
+uv pip install -e .
 ```
 
 *Note: If you get an error related to Rust in the dependency installation then make sure Rust is installed and in your `PATH`, instructions: https://rustup.rs*

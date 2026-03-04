@@ -2,11 +2,15 @@ FROM python:3.12.10-slim AS base
 
 RUN apt update && apt install --no-install-recommends -y git curl && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+# Install uv for fast package management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:$PATH"
+
 WORKDIR /app
 ADD pyproject.toml .
 ADD requirements.txt .
-ADD docs docs
-RUN pip install --no-cache-dir . && rm pyproject.toml requirements.txt
+ADD uv.lock .
+RUN uv sync --frozen && rm pyproject.toml requirements.txt uv.lock
 ENV PYTHONPATH=/app
 
 FROM base AS github_app
@@ -40,7 +44,7 @@ CMD ["python", "-m", "gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "p
 
 FROM base AS test
 ADD requirements-dev.txt .
-RUN pip install --no-cache-dir -r requirements-dev.txt && rm requirements-dev.txt
+RUN uv pip install -r requirements-dev.txt --frozen && rm requirements-dev.txt
 ADD pr_insight pr_insight
 ADD tests tests
 

@@ -1,0 +1,83 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Python: Install Dependencies",
+      "type": "shell",
+      "command": "uv pip install -r requirements.txt -r requirements-dev.txt",
+      "options": {
+        "env": {
+          "PATH": "${env:HOME}/.local/bin:${env:PATH}"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Python: Run Tests",
+      "type": "shell",
+      "command": "python -m pytest tests/unittest -v",
+      "options": {
+        "env": {
+          "PYTHONPATH": ".",
+          "PATH": "${env:HOME}/.local/bin:${env:PATH}"
+        }
+      },
+      "problemMatcher": ["$pytest"],
+      "group": "test"
+    },
+    {
+      "label": "Python: Run Single Test",
+      "type": "shell",
+      "command": "python -m pytest ${relativeFile} -v",
+      "options": {
+        "env": {
+          "PYTHONPATH": "."
+        }
+      },
+      "problemMatcher": ["$pytest"],
+      "group": "test"
+    },
+    {
+      "label": "Python: Lint with Ruff",
+      "type": "shell",
+      "command": "ruff check .",
+      "options": {
+        "env": {
+          "PATH": "${env:HOME}/.local/bin:${env:PATH}"
+        }
+      }
+    },
+    {
+      "label": "Python: Format with Black",
+      "type": "shell",
+      "command": "black .",
+      "options": {
+        "env": {
+          "PATH": "${env:HOME}/.local/bin:${env:PATH}"
+        }
+      }
+    },
+    {
+      "label": "Docker: Build Test Image",
+      "type": "shell",
+      "command": "docker build -f docker/Dockerfile --target test .",
+      "problemMatcher": []
+    },
+    {
+      "label": "Docker: Build CLI Image",
+      "type": "shell",
+      "command": "docker build -f docker/Dockerfile --target cli .",
+      "problemMatcher": []
+    },
+    {
+      "label": "Pre-commit: Run All",
+      "type": "shell",
+      "command": "pre-commit run --all-files",
+      "options": {
+        "env": {
+          "PATH": "${env:HOME}/.local/bin:${env:PATH}"
+        }
+      }
+    }
+  ]
+}

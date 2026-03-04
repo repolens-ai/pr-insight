@@ -1,0 +1,80 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    {
+      "name": "Python: pytest Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "${file}",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    {
+      "name": "Python: pytest - tests/unittest",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "tests/unittest",
+        "-v"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    {
+      "name": "Python: CLI Module",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pr_insight.cli",
+      "console": "integratedTerminal",
+      "justMyCode": true,
+      "env": {
+        "PYTHONPATH": ".",
+        "OPENAI.KEY": "${env:OPENAI_KEY}",
+        "GITHUB.USER_TOKEN": "${env:GITHUB_USER_TOKEN}"
+      },
+      "args": [
+        "--pr_url",
+        "https://github.com/owner/repo/pull/1",
+        "review"
+      ]
+    },
+    {
+      "name": "Docker: Python - Current File",
+      "type": "docker",
+      "request": "launch",
+      "preLaunchTask": "docker-run: debug",
+      "python": {
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/app"
+          }
+        ],
+        "port": 5678,
+        "debugAdapter": "debugpy"
+      }
+    }
+  ]
+}

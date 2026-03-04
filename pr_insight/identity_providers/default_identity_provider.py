@@ -1,5 +1,5 @@
 from pr_insight.identity_providers.identity_provider import (Eligibility,
-                                                             IdentityProvider)
+                                                           IdentityProvider)
 
 
 class DefaultIdentityProvider(IdentityProvider):

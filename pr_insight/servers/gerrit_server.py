@@ -9,8 +9,8 @@ from starlette.middleware import Middleware
 from starlette_context import context
 from starlette_context.middleware import RawContextMiddleware
 
+from pr_insight.agent.pr_insight import PRAgent
 from pr_insight.config_loader import get_settings, global_settings
-from pr_insight.insight.pr_insight import PRInsight
 from pr_insight.log import get_logger, setup_logger
 
 setup_logger()
@@ -39,8 +39,14 @@ async def handle_gerrit_request(action: Action, item: Item):
 
     if action == Action.ask:
         if not item.msg:
-            return HTTPException(status_code=400, detail="msg is required for ask command")
-    await PRInsight().handle_request(f"{item.project}:{item.refspec}", f"/{item.msg.strip()}")
+            return HTTPException(
+                status_code=400,
+                detail="msg is required for ask command"
+            )
+    await PRAgent().handle_request(
+        f"{item.project}:{item.refspec}",
+        f"/{item.msg.strip()}"
+    )
 
 
 async def get_body(request):
@@ -67,5 +73,5 @@ def start():
     uvicorn.run(app, host="0.0.0.0", port=3000)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     start()

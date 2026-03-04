@@ -8,10 +8,10 @@ As an alternative, you can filter in your mail provider the notifications specif
 
 ![filter_mail_notifications](https://khulnasoft.com/images/pr_insight/filter_mail_notifications.png){width=512}
 
-
 Another option to reduce the mail overload, yet still receive notifications on PR-Insight tools, is to disable the help collapsible section in PR-Insight bot comments.
 This can done by setting `enable_help_text=false` for the relevant tool in the configuration file.
 For example, to disable the help text for the `pr_reviewer` tool, set:
+
 ```
 [pr_reviewer]
 enable_help_text = false

@@ -11,19 +11,22 @@ from requests.auth import HTTPBasicAuth
 
 from pr_insight.config_loader import get_settings
 from pr_insight.log import get_logger, setup_logger
-from tests.e2e_tests.e2e_utils import (FILE_PATH,
-                                       IMPROVE_START_WITH_REGEX_PATTERN,
-                                       NEW_FILE_CONTENT, NUM_MINUTES,
-                                       PR_HEADER_START_WITH, REVIEW_START_WITH)
+from tests.e2e_tests.e2e_utils import (
+    FILE_PATH,
+    IMPROVE_START_WITH_REGEX_PATTERN,
+    NEW_FILE_CONTENT,
+    NUM_MINUTES,
+    PR_HEADER_START_WITH,
+    REVIEW_START_WITH,
+)
 
 log_level = os.environ.get("LOG_LEVEL", "INFO")
 setup_logger(log_level)
 logger = get_logger()
 
-
 def test_e2e_run_bitbucket_app():
-    repo_slug = "pr-insight-tests"
-    project_key = "khulnasoft"
+    repo_slug = 'pr-insight-tests'
+    project_key = 'khulnasoft'
     base_branch = "main"  # or any base branch you want
     new_branch = f"bitbucket_app_e2e_test-{datetime.now().strftime('%Y-%m-%d-%H-%M-%S')}"
     get_settings().config.git_provider = "bitbucket"
@@ -40,20 +43,26 @@ def test_e2e_run_bitbucket_app():
         # Create a new branch from the base branch
         logger.info(f"Creating a new branch {new_branch} from {base_branch}")
         source_branch = repo.branches.get(base_branch)
-        target_repo = repo.branches.create(new_branch, source_branch.hash)
+        target_repo = repo.branches.create(new_branch,source_branch.hash)
 
         # Update the file content
         url = f"https://api.bitbucket.org/2.0/repositories/{project_key}/{repo_slug}/src"
-        files = {FILE_PATH: NEW_FILE_CONTENT}
-        data = {
+        files={FILE_PATH: NEW_FILE_CONTENT}
+        data={
             "message": "update cli_pip.py",
             "branch": new_branch,
         }
         requests.request("POST", url, auth=HTTPBasicAuth(username, password), data=data, files=files)
 
+
         # Create a pull request
         logger.info(f"Creating a pull request from {new_branch} to {base_branch}")
-        pr = repo.pullrequests.create(title=f"{new_branch}", description="update cli_pip.py", source_branch=new_branch, destination_branch=base_branch)
+        pr = repo.pullrequests.create(
+            title=f'{new_branch}',
+            description="update cli_pip.py",
+            source_branch=new_branch,
+            destination_branch=base_branch
+        )
 
         # check every 1 minute, for 5 minutes if the PR has all the tool results
         for i in range(NUM_MINUTES):
@@ -61,10 +70,10 @@ def test_e2e_run_bitbucket_app():
             time.sleep(60)
             comments = list(pr.comments())
             comments_raw = [c.raw for c in comments]
-            if len(comments) >= 5:  # header, 3 suggestions, 1 review
+            if len(comments) >= 5: # header, 3 suggestions, 1 review
                 valid_review = False
                 for comment_raw in comments_raw:
-                    if comment_raw.startswith("## PR Reviewer Guide 🔍"):
+                    if comment_raw.startswith('## PR Reviewer Guide 🔍'):
                         valid_review = True
                         break
                 if valid_review:
@@ -91,5 +100,5 @@ def test_e2e_run_bitbucket_app():
         assert False
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     test_e2e_run_bitbucket_app()

@@ -30,5 +30,9 @@
         "url": "/webhook"
       }
     ]
+  },
+  "links": {
+    "privacy": "https://khulnasoft.com/privacy-policy",
+    "terms": "https://khulnasoft.com/terms"
   }
 }

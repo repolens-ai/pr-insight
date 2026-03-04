@@ -1,15 +1,18 @@
 # Fetching Ticket Context for PRs
-`Supported Git Platforms : GitHub, GitLab, Bitbucket`
+
+`Supported Git Platforms: GitHub, GitLab, Bitbucket`
 
 ## Overview
-PR-Insight PR Insight streamlines code review workflows by seamlessly connecting with multiple ticket management systems.
+
+PR-Insight streamlines code review workflows by seamlessly connecting with multiple ticket management systems.
 This integration enriches the review process by automatically surfacing relevant ticket information and context alongside code changes.
 
-## Ticket systems supported
-- GitHub
-- Jira (💎)
+**Ticket systems supported**:
 
-Ticket data fetched:
+- [GitHub/Gitlab Issues](#githubgitlab-issues-integration)
+- [Jira](#jira-integration)
+
+**Ticket data fetched:**
 
 1. Ticket Title
 2. Ticket Description
@@ -23,81 +26,74 @@ Ticket data fetched:
 Ticket Recognition Requirements:
 
 - The PR description should contain a link to the ticket or if the branch name starts with the ticket id / number.
-- For Jira tickets, you should follow the instructions in [Jira Integration](https://pr-insight-docs.khulnasoft.com/core-abilities/fetching_ticket_context/#jira-integration) in order to authenticate with Jira.
+- For Jira tickets, you should follow the instructions in [Jira Integration](#jira-integration) in order to authenticate with Jira.
 
 ### Describe tool
-PR-Insight PR Insight will recognize the ticket and use the ticket content (title, description, labels) to provide additional context for the code changes.
+
+PR-Insight will recognize the ticket and use the ticket content (title, description, labels) to provide additional context for the code changes.
 By understanding the reasoning and intent behind modifications, the LLM can offer more insightful and relevant code analysis.
 
 ### Review tool
+
 Similarly to the `describe` tool, the `review` tool will use the ticket content to provide additional context for the code changes.
 
 In addition, this feature will evaluate how well a Pull Request (PR) adheres to its original purpose/intent as defined by the associated ticket or issue mentioned in the PR description.
-Each ticket will be assigned a label (Compliance/Alignment level), Indicates the degree to which the PR fulfills its original purpose, Options: Fully compliant, Partially compliant or Not compliant.
+Each ticket will be assigned a label (Compliance/Alignment level), Indicates the degree to which the PR fulfills its original purpose:
 
+- Fully Compliant
+- Partially Compliant
+- Not Compliant
+- PR Code Verified
 
 ![Ticket Compliance](https://www.khulnasoft.com/images/pr_insight/ticket_compliance_review.png){width=768}
 
-By default, the tool will automatically validate if the PR complies with the referenced ticket.
-If you want to disable this feedback, add the following line to your configuration file:
+A `PR Code Verified` label indicates the PR code meets ticket requirements, but requires additional manual testing beyond the code scope. For example - validating UI display across different environments (Mac, Windows, mobile, etc.).
 
-```toml
-[pr_reviewer]
-require_ticket_analysis_review=false
-```
 
-## Providers
+#### Configuration options
 
-### Github Issues Integration
+-
 
-PR-Insight PR Insight will automatically recognize Github issues mentioned in the PR description and fetch the issue content.
-Examples of valid GitHub issue references:
+    By default, the `review` tool will automatically validate if the PR complies with the referenced ticket.
+    If you want to disable this feedback, add the following line to your configuration file:
 
-- `https://github.com/<ORG_NAME>/<REPO_NAME>/issues/<ISSUE_NUMBER>`
+    ```toml
+    [pr_reviewer]
+    require_ticket_analysis_review=false
+    ```
+
+-
+
+    If you set:
+    ```toml
+    [pr_reviewer]
+    check_pr_additional_content=true
+    ```
+    (default: `false`)
+
+    the `review` tool will also validate that the PR code doesn't contain any additional content that is not related to the ticket. If it does, the PR will be labeled at best as `PR Code Verified`, and the `review` tool will provide a comment with the additional unrelated content found in the PR code.
+
+## GitHub/Gitlab Issues Integration
+
+PR-Insight will automatically recognize GitHub/Gitlab issues mentioned in the PR description and fetch the issue content.
+Examples of valid GitHub/Gitlab issue references:
+
+- `https://github.com/<ORG_NAME>/<REPO_NAME>/issues/<ISSUE_NUMBER>` or `https://gitlab.com/<ORG_NAME>/<REPO_NAME>/-/issues/<ISSUE_NUMBER>`
 - `#<ISSUE_NUMBER>`
 - `<ORG_NAME>/<REPO_NAME>#<ISSUE_NUMBER>`
 
-Since PR-Insight PR Insight is integrated with GitHub, it doesn't require any additional configuration to fetch GitHub issues.
+Branch names can also be used to link issues, for example:
+- `123-fix-bug` (where `123` is the issue number)
 
-### Jira Integration 💎
+Since PR-Insight is integrated with GitHub, it doesn't require any additional configuration to fetch GitHub issues.
+
+## Jira Integration
 
 We support both Jira Cloud and Jira Server/Data Center.
-To integrate with Jira, you can link your PR to a ticket using either of these methods:
 
-**Method 1: Description Reference:**
+### Jira Cloud
 
-Include a ticket reference in your PR description using either the complete URL format https://<JIRA_ORG>.atlassian.net/browse/ISSUE-123 or the shortened ticket ID ISSUE-123.
-
-**Method 2: Branch Name Detection:**
-
-Name your branch with the ticket ID as a prefix (e.g., `ISSUE-123-feature-description` or `ISSUE-123/feature-description`).
-
-!!! note "Jira Base URL"
-    For shortened ticket IDs or branch detection (method 2), you must configure the Jira base URL in your configuration file under the [jira] section:
-
-    ```toml
-    [jira]
-    jira_base_url = "https://<JIRA_ORG>.atlassian.net"
-    ```
-
-#### Jira Cloud 💎
-There are two ways to authenticate with Jira Cloud:
-
-**1) Jira App Authentication**
-
-The recommended way to authenticate with Jira Cloud is to install the PR-Insight app in your Jira Cloud instance. This will allow PR-Insight to access Jira data on your behalf.
-
-Installation steps:
-
-1. Click [here](https://auth.atlassian.com/authorize?audience=api.atlassian.com&client_id=8krKmA4gMD8mM8z24aRCgPCSepZNP1xf&scope=read%3Ajira-work%20offline_access&redirect_uri=https%3A%2F%2Fregister.jira.pr-insight.khulnasoft.com&state=pr-insightmerge&response_type=code&prompt=consent) to install the PR-Insight app in your Jira Cloud instance, click the `accept` button.<br>
-![Jira Cloud App Installation](https://www.khulnasoft.com/images/pr_insight/jira_app_installation1.png){width=384}
-
-2. After installing the app, you will be redirected to the PR-Insight registration page. and you will see a success message.<br>
-![Jira Cloud App success message](https://www.khulnasoft.com/images/pr_insight/jira_app_success.png){width=384}
-
-3. Now you can use the Jira integration in PR-Insight PR Insight.
-
-**2) Email/Token Authentication**
+#### Email/Token Authentication
 
 You can create an API token from your Atlassian account:
 
@@ -111,7 +107,7 @@ You can create an API token from your Atlassian account:
 
 ![Jira Cloud API Token](https://images.ctfassets.net/zsv3d0ugroxu/1RYvh9lqgeZjjNe5S3Hbfb/155e846a1cb38f30bf17512b6dfd2229/screenshot_NewAPIToken){width=384}
 
-5. In your [configuration file](https://pr-insight-docs.khulnasoft.com/usage-guide/configuration_options/) add the following lines:
+5. In your [configuration file](../usage-guide/configuration_options.md) add the following lines:
 
 ```toml
 [jira]
@@ -119,10 +115,67 @@ jira_api_token = "YOUR_API_TOKEN"
 jira_api_email = "YOUR_EMAIL"
 ```
 
+### Jira Data Center/Server
 
-#### Jira Server/Data Center 💎
+#### Using Basic Authentication for Jira Data Center/Server
 
-Currently, we only support the Personal Access Token (PAT) Authentication method.
+You can use your Jira username and password to authenticate with Jira Data Center/Server.
+
+In your Configuration file/Environment variables/Secrets file, add the following lines:
+
+```toml
+jira_api_email = "your_username"
+jira_api_token = "your_password"
+```
+
+(Note that indeed the 'jira_api_email' field is used for the username, and the 'jira_api_token' field is used for the user password.)
+
+##### Validating Basic authentication via Python script
+
+If you are facing issues retrieving tickets in PR-Insight with Basic auth, you can validate the flow using a Python script.
+This following steps will help you check if the basic auth is working correctly, and if you can access the Jira ticket details:
+
+1. run `pip install jira==3.8.0`
+
+2. run the following Python script (after replacing the placeholders with your actual values):
+
+???- example "Script to validate basic auth"
+
+    ```python
+    from jira import JIRA
+    
+    
+    if __name__ == "__main__":
+        try:
+            # Jira server URL
+            server = "https://..."
+            # Basic auth
+            username = "..."
+            password = "..."
+            # Jira ticket code (e.g. "PROJ-123")
+            ticket_id = "..."
+    
+            print("Initializing JiraServerTicketProvider with JIRA server")
+            # Initialize JIRA client
+            jira = JIRA(
+                server=server,
+                basic_auth=(username, password),
+                timeout=30
+            )
+            if jira:
+                print(f"JIRA client initialized successfully")
+            else:
+                print("Error initializing JIRA client")
+    
+            # Fetch ticket details
+            ticket = jira.issue(ticket_id)
+            print(f"Ticket title: {ticket.fields.summary}")
+    
+        except Exception as e:
+            print(f"Error fetching JIRA ticket details: {e}")
+    ```
+
+#### Using a Personal Access Token (PAT) for Jira Data Center/Server
 
 1. Create a [Personal Access Token (PAT)](https://confluence.atlassian.com/enterprise/using-personal-access-tokens-1026032365.html) in your Jira account
 2. In your Configuration file/Environment variables/Secrets file, add the following lines:
@@ -132,3 +185,131 @@ Currently, we only support the Personal Access Token (PAT) Authentication method
 jira_base_url = "YOUR_JIRA_BASE_URL" # e.g. https://jira.example.com
 jira_api_token = "YOUR_API_TOKEN"
 ```
+
+##### Validating PAT token via Python script
+
+If you are facing issues retrieving tickets in PR-Insight with PAT token, you can validate the flow using a Python script.
+This following steps will help you check if the token is working correctly, and if you can access the Jira ticket details:
+
+1. run `pip install jira==3.8.0`
+
+2. run the following Python script (after replacing the placeholders with your actual values):
+
+??? example- "Script to validate PAT token"
+
+    ```python
+    from jira import JIRA
+    
+    
+    if __name__ == "__main__":
+        try:
+            # Jira server URL
+            server = "https://..."
+            # Jira PAT token
+            token_auth = "..."
+            # Jira ticket code (e.g. "PROJ-123")
+            ticket_id = "..."
+    
+            print("Initializing JiraServerTicketProvider with JIRA server")
+            # Initialize JIRA client
+            jira = JIRA(
+                server=server,
+                token_auth=token_auth,
+                timeout=30
+            )
+            if jira:
+                print(f"JIRA client initialized successfully")
+            else:
+                print("Error initializing JIRA client")
+    
+            # Fetch ticket details
+            ticket = jira.issue(ticket_id)
+            print(f"Ticket title: {ticket.fields.summary}")
+    
+        except Exception as e:
+            print(f"Error fetching JIRA ticket details: {e}")
+    ```
+
+
+### Multi-JIRA Server Configuration
+
+PR-Insight supports connecting to multiple JIRA servers using different authentication methods.
+
+=== "Email/Token (Basic Auth)"
+
+    Configure multiple servers using Email/Token authentication:
+
+    - `jira_servers`: List of JIRA server URLs
+    - `jira_api_token`: List of API tokens (for Cloud) or passwords (for Data Center)
+    - `jira_api_email`: List of emails (for Cloud) or usernames (for Data Center)
+    - `jira_base_url`: Default server for ticket IDs like `PROJ-123`, Each repository can configure (local config file) its own `jira_base_url` to choose which server to use by default.
+
+    **Example Configuration:**
+    ```toml
+    [jira]
+    # Server URLs
+    jira_servers = ["https://company.atlassian.net", "https://datacenter.jira.com"]
+
+    # API tokens/passwords
+    jira_api_token = ["cloud_api_token_here", "datacenter_password"]
+
+    # Emails/usernames (both required)
+    jira_api_email = ["user@company.com", "datacenter_username"]
+
+    # Default server for ticket IDs
+    jira_base_url = "https://company.atlassian.net"
+    ```
+
+=== "PAT Auth"
+
+    Configure multiple servers using Personal Access Token authentication:
+
+    - `jira_servers`: List of JIRA server URLs
+    - `jira_api_token`: List of PAT tokens
+    - `jira_api_email`: Not needed (can be omitted or left empty)
+    - `jira_base_url`: Default server for ticket IDs like `PROJ-123`, Each repository can configure (local config file) its own `jira_base_url` to choose which server to use by default.
+
+    **Example Configuration:**
+    ```toml
+    [jira]
+    # Server URLs
+    jira_servers = ["https://server1.jira.com", "https://server2.jira.com"]
+
+    # PAT tokens only
+    jira_api_token = ["pat_token_1", "pat_token_2"]
+
+    # Default server for ticket IDs
+    jira_base_url = "https://server1.jira.com"
+    ```
+
+    **Mixed Authentication (Email/Token + PAT):**
+    ```toml
+    [jira]
+    jira_servers = ["https://company.atlassian.net", "https://server.jira.com"]
+    jira_api_token = ["cloud_api_token", "server_pat_token"]
+    jira_api_email = ["user@company.com", ""]  # Empty for PAT
+    ```
+
+
+
+
+### How to link a PR to a Jira ticket
+
+To integrate with Jira, you can link your PR to a ticket using either of these methods:
+
+**Method 1: Description Reference:**
+
+Include a ticket reference in your PR description, using either the complete URL format `https://<JIRA_ORG>.atlassian.net/browse/ISSUE-123` or the shortened ticket ID `ISSUE-123` (without prefix or suffix for the shortened ID).
+
+**Method 2: Branch Name Detection:**
+
+Name your branch with the ticket ID as a prefix (e.g., `ISSUE-123-feature-description` or `ISSUE-123/feature-description`).
+
+!!! note "Jira Base URL"
+    For shortened ticket IDs or branch detection (method 2 for JIRA cloud), you must configure the Jira base URL in your configuration file under the [jira] section:
+
+    ```toml
+    [jira]
+    jira_base_url = "https://<JIRA_ORG>.atlassian.net"
+    ```
+    Where `<JIRA_ORG>` is your Jira organization identifier (e.g., `mycompany` for `https://mycompany.atlassian.net`).

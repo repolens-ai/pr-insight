@@ -2,14 +2,15 @@ import copy
 import difflib
 import hashlib
 import itertools
-import json
 import re
 import time
 import traceback
+import json
 from datetime import datetime
 from typing import Optional, Tuple
 from urllib.parse import urlparse
 
+from github.Issue import Issue
 from github import AppAuthentication, Auth, Github, GithubException
 from retry import retry
 from starlette_context import context
@@ -36,23 +37,44 @@ class GithubProvider(GitProvider):
         except Exception:
             self.installation_id = None
         self.max_comment_chars = 65000
-        self.base_url = get_settings().get("GITHUB.BASE_URL", "https://api.github.com").rstrip("/")  # "https://api.github.com"
+        self.base_url = get_settings().get("GITHUB.BASE_URL", "https://api.github.com").rstrip("/") # "https://api.github.com"
         self.base_url_html = self.base_url.split("api/")[0].rstrip("/") if "api/" in self.base_url else "https://github.com"
         self.github_client = self._get_github_client()
         self.repo = None
         self.pr_num = None
         self.pr = None
+        self.issue_main = None
         self.github_user_id = None
         self.diff_files = None
         self.git_files = None
         self.incremental = IncrementalPR(False)
-        if pr_url and "pull" in pr_url:
+        if pr_url and 'pull' in pr_url:
             self.set_pr(pr_url)
             self.pr_commits = list(self.pr.get_commits())
             self.last_commit_id = self.pr_commits[-1]
-            self.pr_url = self.get_pr_url()  # pr_url for github actions can be as api.github.com, so we need to get the url from the pr object
-        else:
+            self.pr_url = self.get_pr_url() # pr_url for github actions can be as api.github.com, so we need to get the url from the pr object
+        elif pr_url and 'issue' in pr_url: #url is an issue
+            self.issue_main = self._get_issue_handle(pr_url)
+        else: #Instantiated the provider without a PR / Issue
             self.pr_commits = None
+
+    def _get_issue_handle(self, issue_url) -> Optional[Issue]:
+        repo_name, issue_number = self._parse_issue_url(issue_url)
+        if not repo_name or not issue_number:
+            get_logger().error(f"Given url: {issue_url} is not a valid issue.")
+            return None
+        # else: Check if can get a valid Repo handle:
+        try:
+            repo_obj = self.github_client.get_repo(repo_name)
+            if not repo_obj:
+                get_logger().error(f"Given url: {issue_url}, belonging to owner/repo: {repo_name} does "
+                                   f"not have a valid repository: {self.get_git_repo_url(issue_url)}")
+                return None
+            # else: Valid repo handle:
+            return repo_obj.get_issue(issue_number)
+        except Exception as e:
+            get_logger().exception(f"Failed to get an issue object for issue: {issue_url}, belonging to owner/repo: {repo_name}")
+            return None
 
     def get_incremental_commits(self, incremental=IncrementalPR(False)):
         self.incremental = incremental
@@ -62,6 +84,63 @@ class GithubProvider(GitProvider):
 
     def is_supported(self, capability: str) -> bool:
         return True
+
+    def _get_owner_and_repo_path(self, given_url: str) -> str:
+        try:
+            repo_path = None
+            if 'issues' in given_url:
+                repo_path, _ = self._parse_issue_url(given_url)
+            elif 'pull' in given_url:
+                repo_path, _ = self._parse_pr_url(given_url)
+            elif given_url.endswith('.git'):
+                parsed_url = urlparse(given_url)
+                repo_path = (parsed_url.path.split('.git')[0])[1:] # /<owner>/<repo>.git -> <owner>/<repo>
+            if not repo_path:
+                get_logger().error(f"url is neither an issues url nor a PR url nor a valid git url: {given_url}. Returning empty result.")
+                return ""
+            return repo_path
+        except Exception as e:
+            get_logger().exception(f"unable to parse url: {given_url}. Returning empty result.")
+            return ""
+
+    def get_git_repo_url(self, issues_or_pr_url: str) -> str:
+        repo_path = self._get_owner_and_repo_path(issues_or_pr_url) #Return: <OWNER>/<REPO>
+        if not repo_path or repo_path not in issues_or_pr_url:
+            get_logger().error(f"Unable to retrieve owner/path from url: {issues_or_pr_url}")
+            return ""
+        return f"{self.base_url_html}/{repo_path}.git" #https://github.com / <OWNER>/<REPO>.git
+
+    # Given a git repo url, return prefix and suffix of the provider in order to view a given file belonging to that repo.
+    # Example: https://github.com/repolens-ai/pr-insight.git and branch: v0.8 -> prefix: "https://github.com/repolens-ai/pr-insight/blob/v0.8", suffix: ""
+    # In case git url is not provided, provider will use PR context (which includes branch) to determine the prefix and suffix.
+    def get_canonical_url_parts(self, repo_git_url:str, desired_branch:str) -> Tuple[str, str]:
+        owner = None
+        repo = None
+        scheme_and_netloc = None
+
+        if repo_git_url or self.issue_main: #Either user provided an external git url, which may be different than what this provider was initialized with, or an issue:
+            desired_branch = desired_branch if repo_git_url else self.issue_main.repository.default_branch
+            html_url = repo_git_url if repo_git_url else self.issue_main.html_url
+            parsed_git_url = urlparse(html_url)
+            scheme_and_netloc = parsed_git_url.scheme + "://" + parsed_git_url.netloc
+            repo_path = self._get_owner_and_repo_path(html_url)
+            if repo_path.count('/') == 1: #Has to have the form <owner>/<repo>
+                owner, repo = repo_path.split('/')
+            else:
+                get_logger().error(f"Invalid repo_path: {repo_path} from url: {html_url}")
+                return ("", "")
+
+        if (not owner or not repo) and self.repo: #"else" - User did not provide an external git url, or not an issue, use self.repo object
+            owner, repo = self.repo.split('/')
+            scheme_and_netloc = self.base_url_html
+            desired_branch = self.repo_obj.default_branch
+        if not all([scheme_and_netloc, owner, repo]): #"else": Not invoked from a PR context,but no provided git url for context
+            get_logger().error(f"Unable to get canonical url parts since missing context (PR or explicit git url)")
+            return ("", "")
+
+        prefix = f"{scheme_and_netloc}/{owner}/{repo}/blob/{desired_branch}"
+        suffix = ""  # github does not add a suffix
+        return (prefix, suffix)
 
     def get_pr_url(self) -> str:
         return self.pr.html_url
@@ -121,7 +200,7 @@ class GithubProvider(GitProvider):
             git_files = context.get("git_files", None)
             if git_files:
                 return git_files
-            self.git_files = list(self.pr.get_files())  # 'list' to handle pagination
+            self.git_files = list(self.pr.get_files()) # 'list' to handle pagination
             context["git_files"] = self.git_files
             return self.git_files
         except Exception:
@@ -138,7 +217,8 @@ class GithubProvider(GitProvider):
             except Exception as e:
                 return -1
 
-    @retry(exceptions=RateLimitExceeded, tries=get_settings().github.ratelimit_retries, delay=2, backoff=2, jitter=(1, 3))
+    @retry(exceptions=RateLimitExceeded,
+           tries=get_settings().github.ratelimit_retries, delay=2, backoff=2, jitter=(1, 3))
     def get_diff_files(self) -> list[FilePatchInfo]:
         """
         Retrieves the list of files that have been modified, added, deleted, or renamed in a pull request in GitHub,
@@ -166,7 +246,9 @@ class GithubProvider(GitProvider):
                 try:
                     names_original = [file.filename for file in files_original]
                     names_new = [file.filename for file in files]
-                    get_logger().info(f"Filtered out [ignore] files for pull request:", extra={"files": names_original, "filtered_files": names_new})
+                    get_logger().info(f"Filtered out [ignore] files for pull request:", extra=
+                    {"files": names_original,
+                     "filtered_files": names_new})
                 except Exception:
                     pass
 
@@ -181,13 +263,14 @@ class GithubProvider(GitProvider):
             repo = self.repo_obj
             pr = self.pr
             try:
-                compare = repo.compare(pr.base.sha, pr.head.sha)  # communication with GitHub
+                compare = repo.compare(pr.base.sha, pr.head.sha) # communication with GitHub
                 merge_base_commit = compare.merge_base_commit
             except Exception as e:
                 get_logger().error(f"Failed to get merge base commit: {e}")
                 merge_base_commit = pr.base
             if merge_base_commit.sha != pr.base.sha:
-                get_logger().info(f"Using merge base commit {merge_base_commit.sha} instead of base commit ")
+                get_logger().info(
+                    f"Using merge base commit {merge_base_commit.sha} instead of base commit ")
 
             counter_valid = 0
             for file in files:
@@ -226,36 +309,32 @@ class GithubProvider(GitProvider):
                         if not patch:
                             patch = load_large_diff(file.filename, new_file_content_str, original_file_content_str)
 
-                if file.status == "added":
+
+                if file.status == 'added':
                     edit_type = EDIT_TYPE.ADDED
-                elif file.status == "removed":
+                elif file.status == 'removed':
                     edit_type = EDIT_TYPE.DELETED
-                elif file.status == "renamed":
+                elif file.status == 'renamed':
                     edit_type = EDIT_TYPE.RENAMED
-                elif file.status == "modified":
+                elif file.status == 'modified':
                     edit_type = EDIT_TYPE.MODIFIED
                 else:
                     get_logger().error(f"Unknown edit type: {file.status}")
                     edit_type = EDIT_TYPE.UNKNOWN
 
                 # count number of lines added and removed
-                if hasattr(file, "additions") and hasattr(file, "deletions"):
+                if hasattr(file, 'additions') and hasattr(file, 'deletions'):
                     num_plus_lines = file.additions
                     num_minus_lines = file.deletions
                 else:
                     patch_lines = patch.splitlines(keepends=True)
-                    num_plus_lines = len([line for line in patch_lines if line.startswith("+")])
-                    num_minus_lines = len([line for line in patch_lines if line.startswith("-")])
+                    num_plus_lines = len([line for line in patch_lines if line.startswith('+')])
+                    num_minus_lines = len([line for line in patch_lines if line.startswith('-')])
 
-                file_patch_canonical_structure = FilePatchInfo(
-                    original_file_content_str,
-                    new_file_content_str,
-                    patch,
-                    file.filename,
-                    edit_type=edit_type,
-                    num_plus_lines=num_plus_lines,
-                    num_minus_lines=num_minus_lines,
-                )
+                file_patch_canonical_structure = FilePatchInfo(original_file_content_str, new_file_content_str, patch,
+                                                               file.filename, edit_type=edit_type,
+                                                               num_plus_lines=num_plus_lines,
+                                                               num_minus_lines=num_minus_lines,)
                 diff_files.append(file_patch_canonical_structure)
             if invalid_files_names:
                 get_logger().info(f"Filtered out files with invalid extensions: {invalid_files_names}")
@@ -269,7 +348,8 @@ class GithubProvider(GitProvider):
             return diff_files
 
         except Exception as e:
-            get_logger().error(f"Failing to get diff files: {e}", artifact={"traceback": traceback.format_exc()})
+            get_logger().error(f"Failing to get diff files: {e}",
+                               artifact={"traceback": traceback.format_exc()})
             raise RateLimitExceeded("Rate limit exceeded for GitHub API.") from e
 
     def publish_description(self, pr_title: str, pr_body: str):
@@ -281,19 +361,32 @@ class GithubProvider(GitProvider):
     def get_comment_url(self, comment) -> str:
         return comment.html_url
 
-    def publish_persistent_comment(self, pr_comment: str, initial_header: str, update_header: bool = True, name="review", final_update_message=True):
+    def publish_persistent_comment(self, pr_comment: str,
+                                   initial_header: str,
+                                   update_header: bool = True,
+                                   name='review',
+                                   final_update_message=True):
         self.publish_persistent_comment_full(pr_comment, initial_header, update_header, name, final_update_message)
 
     def publish_comment(self, pr_comment: str, is_temporary: bool = False):
+        if not self.pr and not self.issue_main:
+            get_logger().error("Cannot publish a comment if missing PR/Issue context")
+            return None
+
         if is_temporary and not get_settings().config.publish_output_progress:
             get_logger().debug(f"Skipping publish_comment for temporary comment: {pr_comment}")
             return None
         pr_comment = self.limit_output_characters(pr_comment, self.max_comment_chars)
+
+        # In case this is an issue, can publish the comment on the issue.
+        if self.issue_main:
+            return self.issue_main.create_comment(pr_comment)
+
         response = self.pr.create_issue_comment(pr_comment)
         if hasattr(response, "user") and hasattr(response.user, "login"):
             self.github_user_id = response.user.login
         response.is_temporary = is_temporary
-        if not hasattr(self.pr, "comments_list"):
+        if not hasattr(self.pr, 'comments_list'):
             self.pr.comments_list = []
         self.pr.comments_list.append(response)
         return response
@@ -302,9 +395,14 @@ class GithubProvider(GitProvider):
         body = self.limit_output_characters(body, self.max_comment_chars)
         self.publish_inline_comments([self.create_inline_comment(body, relevant_file, relevant_line_in_file)])
 
-    def create_inline_comment(self, body: str, relevant_file: str, relevant_line_in_file: str, absolute_position: int = None):
+
+    def create_inline_comment(self, body: str, relevant_file: str, relevant_line_in_file: str,
+                              absolute_position: int = None):
         body = self.limit_output_characters(body, self.max_comment_chars)
-        position, absolute_position = find_line_number_of_relevant_line_in_file(self.diff_files, relevant_file.strip("`"), relevant_line_in_file, absolute_position)
+        position, absolute_position = find_line_number_of_relevant_line_in_file(self.diff_files,
+                                                                                relevant_file.strip('`'),
+                                                                                relevant_line_in_file,
+                                                                                absolute_position)
         if position == -1:
             get_logger().info(f"Could not find position for {relevant_file} {relevant_line_in_file}")
             subject_type = "FILE"
@@ -320,16 +418,50 @@ class GithubProvider(GitProvider):
         except Exception as e:
             get_logger().info(f"Initially failed to publish inline comments as committable")
 
-            if getattr(e, "status", None) == 422 and not disable_fallback:
+            if (getattr(e, "status", None) == 422 and not disable_fallback):
                 pass  # continue to try _publish_inline_comments_fallback_with_verification
             else:
-                raise e  # will end up with publishing the comments one by one
+                raise e # will end up with publishing the comments one by one
 
             try:
                 self._publish_inline_comments_fallback_with_verification(comments)
             except Exception as e:
                 get_logger().error(f"Failed to publish inline code comments fallback, error: {e}")
-                raise e
+                raise e    
+    
+    def get_review_thread_comments(self, comment_id: int) -> list[dict]:
+        """
+        Retrieves all comments in the same thread as the given comment.
+        
+        Args:
+            comment_id: Review comment ID
+                
+        Returns:
+            List of comments in the same thread
+        """
+        try:
+            # Fetch all comments with a single API call
+            all_comments = list(self.pr.get_comments())
+            
+            # Find the target comment by ID
+            target_comment = next((c for c in all_comments if c.id == comment_id), None)
+            if not target_comment:
+                return []
+        
+            # Get root comment id
+            root_comment_id = target_comment.raw_data.get("in_reply_to_id", target_comment.id)
+            # Build the thread - include the root comment and all replies to it
+            thread_comments = [
+                c for c in all_comments if
+                c.id == root_comment_id or c.raw_data.get("in_reply_to_id") == root_comment_id
+            ]
+        
+        
+            return thread_comments
+                
+        except Exception as e:
+            get_logger().exception(f"Failed to get review comments for an inline ask command", artifact={"comment_id": comment_id, "error": e})
+            return []
 
     def _publish_inline_comments_fallback_with_verification(self, comments: list[dict]):
         """
@@ -348,7 +480,8 @@ class GithubProvider(GitProvider):
 
         # try to publish one by one the invalid comments as a one-line code comment
         if invalid_comments and get_settings().github.try_fix_invalid_inline_comments:
-            fixed_comments_as_one_liner = self._try_fix_invalid_inline_comments([comment for comment, _ in invalid_comments])
+            fixed_comments_as_one_liner = self._try_fix_invalid_inline_comments(
+                [comment for comment, _ in invalid_comments])
             for comment in fixed_comments_as_one_liner:
                 try:
                     self.publish_inline_comments([comment], disable_fallback=True)
@@ -362,7 +495,8 @@ class GithubProvider(GitProvider):
         try:
             # event ="" # By leaving this blank, you set the review action state to PENDING
             input = dict(commit_id=self.last_commit_id.sha, comments=[comment])
-            headers, data = self.pr._requester.requestJsonAndCheck("POST", f"{self.pr.url}/reviews", input=input)
+            headers, data = self.pr._requester.requestJsonAndCheck(
+                "POST", f"{self.pr.url}/reviews", input=input)
             pending_review_id = data["id"]
             is_verified = True
         except Exception as err:
@@ -396,7 +530,6 @@ class GithubProvider(GitProvider):
         This is a best-effort attempt to fix invalid comments, and should be verified accordingly.
         """
         import copy
-
         fixed_comments = []
         for comment in invalid_comments:
             try:
@@ -424,17 +557,20 @@ class GithubProvider(GitProvider):
         code_suggestions_validated = self.validate_comments_inside_hunks(code_suggestions)
 
         for suggestion in code_suggestions_validated:
-            body = suggestion["body"]
-            relevant_file = suggestion["relevant_file"]
-            relevant_lines_start = suggestion["relevant_lines_start"]
-            relevant_lines_end = suggestion["relevant_lines_end"]
+            body = suggestion['body']
+            relevant_file = suggestion['relevant_file']
+            relevant_lines_start = suggestion['relevant_lines_start']
+            relevant_lines_end = suggestion['relevant_lines_end']
 
             if not relevant_lines_start or relevant_lines_start == -1:
-                get_logger().exception(f"Failed to publish code suggestion, relevant_lines_start is {relevant_lines_start}")
+                get_logger().exception(
+                    f"Failed to publish code suggestion, relevant_lines_start is {relevant_lines_start}")
                 continue
 
             if relevant_lines_end < relevant_lines_start:
-                get_logger().exception(f"Failed to publish code suggestion, relevant_lines_end is {relevant_lines_end} and relevant_lines_start is {relevant_lines_start}")
+                get_logger().exception(f"Failed to publish code suggestion, "
+                                  f"relevant_lines_end is {relevant_lines_end} and "
+                                  f"relevant_lines_start is {relevant_lines_start}")
                 continue
 
             if relevant_lines_end > relevant_lines_start:
@@ -468,7 +604,9 @@ class GithubProvider(GitProvider):
         except GithubException as e:
             if hasattr(e, "status") and e.status == 403:
                 # Log as warning for permission-related issues (usually due to polling)
-                get_logger().warning("Failed to edit github comment due to permission restrictions", artifact={"error": e})
+                get_logger().warning(
+                    "Failed to edit github comment due to permission restrictions",
+                    artifact={"error": e})
             else:
                 get_logger().exception(f"Failed to edit github comment", artifact={"error": e})
 
@@ -476,7 +614,10 @@ class GithubProvider(GitProvider):
         try:
             # self.pr.get_issue_comment(comment_id).edit(body)
             body = self.limit_output_characters(body, self.max_comment_chars)
-            headers, data_patch = self.pr._requester.requestJsonAndCheck("PATCH", f"{self.base_url}/repos/{self.repo}/issues/comments/{comment_id}", input={"body": body})
+            headers, data_patch = self.pr._requester.requestJsonAndCheck(
+                "PATCH", f"{self.base_url}/repos/{self.repo}/issues/comments/{comment_id}",
+                input={"body": body}
+            )
         except Exception as e:
             get_logger().exception(f"Failed to edit comment, error: {e}")
 
@@ -484,41 +625,53 @@ class GithubProvider(GitProvider):
         try:
             # self.pr.get_issue_comment(comment_id).edit(body)
             body = self.limit_output_characters(body, self.max_comment_chars)
-            headers, data_patch = self.pr._requester.requestJsonAndCheck("POST", f"{self.base_url}/repos/{self.repo}/pulls/{self.pr_num}/comments/{comment_id}/replies", input={"body": body})
+            headers, data_patch = self.pr._requester.requestJsonAndCheck(
+                "POST", f"{self.base_url}/repos/{self.repo}/pulls/{self.pr_num}/comments/{comment_id}/replies",
+                input={"body": body}
+            )
         except Exception as e:
             get_logger().exception(f"Failed to reply comment, error: {e}")
 
     def get_comment_body_from_comment_id(self, comment_id: int):
         try:
             # self.pr.get_issue_comment(comment_id).edit(body)
-            headers, data_patch = self.pr._requester.requestJsonAndCheck("GET", f"{self.base_url}/repos/{self.repo}/issues/comments/{comment_id}")
-            return data_patch.get("body", "")
+            headers, data_patch = self.pr._requester.requestJsonAndCheck(
+                "GET", f"{self.base_url}/repos/{self.repo}/issues/comments/{comment_id}"
+            )
+            return data_patch.get("body","")
         except Exception as e:
             get_logger().exception(f"Failed to edit comment, error: {e}")
             return None
 
     def publish_file_comments(self, file_comments: list) -> bool:
         try:
-            headers, existing_comments = self.pr._requester.requestJsonAndCheck("GET", f"{self.pr.url}/comments")
+            headers, existing_comments = self.pr._requester.requestJsonAndCheck(
+                "GET", f"{self.pr.url}/comments"
+            )
             for comment in file_comments:
-                comment["commit_id"] = self.last_commit_id.sha
-                comment["body"] = self.limit_output_characters(comment["body"], self.max_comment_chars)
+                comment['commit_id'] = self.last_commit_id.sha
+                comment['body'] = self.limit_output_characters(comment['body'], self.max_comment_chars)
 
                 found = False
                 for existing_comment in existing_comments:
-                    comment["commit_id"] = self.last_commit_id.sha
+                    comment['commit_id'] = self.last_commit_id.sha
                     our_app_name = get_settings().get("GITHUB.APP_NAME", "")
                     same_comment_creator = False
-                    if self.deployment_type == "app":
-                        same_comment_creator = our_app_name.lower() in existing_comment["user"]["login"].lower()
-                    elif self.deployment_type == "user":
-                        same_comment_creator = self.github_user_id == existing_comment["user"]["login"]
-                    if existing_comment["subject_type"] == "file" and comment["path"] == existing_comment["path"] and same_comment_creator:
-                        headers, data_patch = self.pr._requester.requestJsonAndCheck("PATCH", f"{self.base_url}/repos/{self.repo}/pulls/comments/{existing_comment['id']}", input={"body": comment["body"]})
+                    if self.deployment_type == 'app':
+                        same_comment_creator = our_app_name.lower() in existing_comment['user']['login'].lower()
+                    elif self.deployment_type == 'user':
+                        same_comment_creator = self.github_user_id == existing_comment['user']['login']
+                    if existing_comment['subject_type'] == 'file' and comment['path'] == existing_comment['path'] and same_comment_creator:
+
+                        headers, data_patch = self.pr._requester.requestJsonAndCheck(
+                            "PATCH", f"{self.base_url}/repos/{self.repo}/pulls/comments/{existing_comment['id']}", input={"body":comment['body']}
+                        )
                         found = True
                         break
                 if not found:
-                    headers, data_post = self.pr._requester.requestJsonAndCheck("POST", f"{self.pr.url}/comments", input=comment)
+                    headers, data_post = self.pr._requester.requestJsonAndCheck(
+                        "POST", f"{self.pr.url}/comments", input=comment
+                    )
             return True
         except Exception as e:
             get_logger().error(f"Failed to publish diffview file summary, error: {e}")
@@ -526,7 +679,7 @@ class GithubProvider(GitProvider):
 
     def remove_initial_comment(self):
         try:
-            for comment in getattr(self.pr, "comments_list", []):
+            for comment in getattr(self.pr, 'comments_list', []):
                 if comment.is_temporary:
                     self.remove_comment(comment)
         except Exception as e:
@@ -551,7 +704,7 @@ class GithubProvider(GitProvider):
     def get_pr_owner_id(self) -> str | None:
         if not self.repo:
             return None
-        return self.repo.split("/")[0]
+        return self.repo.split('/')[0]
 
     def get_pr_description_full(self):
         return self.pr.body
@@ -559,7 +712,7 @@ class GithubProvider(GitProvider):
     def get_user_id(self):
         if not self.github_user_id:
             try:
-                self.github_user_id = self.github_client.get_user().raw_data["login"]
+                self.github_user_id = self.github_client.get_user().raw_data['login']
             except Exception as e:
                 self.github_user_id = ""
                 # logging.exception(f"Failed to get user id, error: {e}")
@@ -568,7 +721,7 @@ class GithubProvider(GitProvider):
     def get_notifications(self, since: datetime):
         deployment_type = get_settings().get("GITHUB.DEPLOYMENT_TYPE", "user")
 
-        if deployment_type != "user":
+        if deployment_type != 'user':
             raise ValueError("Deployment mode must be set to 'user' to get notifications")
 
         notifications = self.github_client.get_user().get_notifications(since=since)
@@ -588,13 +741,16 @@ class GithubProvider(GitProvider):
             return ""
 
     def get_workspace_name(self):
-        return self.repo.split("/")[0]
+        return self.repo.split('/')[0]
 
     def add_eyes_reaction(self, issue_comment_id: int, disable_eyes: bool = False) -> Optional[int]:
         if disable_eyes:
             return None
         try:
-            headers, data_patch = self.pr._requester.requestJsonAndCheck("POST", f"{self.base_url}/repos/{self.repo}/issues/comments/{issue_comment_id}/reactions", input={"content": "eyes"})
+            headers, data_patch = self.pr._requester.requestJsonAndCheck(
+                "POST", f"{self.base_url}/repos/{self.repo}/issues/comments/{issue_comment_id}/reactions",
+                input={"content": "eyes"}
+            )
             return data_patch.get("id", None)
         except Exception as e:
             get_logger().warning(f"Failed to add eyes reaction, error: {e}")
@@ -603,7 +759,10 @@ class GithubProvider(GitProvider):
     def remove_reaction(self, issue_comment_id: int, reaction_id: str) -> bool:
         try:
             # self.pr.get_issue_comment(issue_comment_id).delete_reaction(reaction_id)
-            headers, data_patch = self.pr._requester.requestJsonAndCheck("DELETE", f"{self.base_url}/repos/{self.repo}/issues/comments/{issue_comment_id}/reactions/{reaction_id}")
+            headers, data_patch = self.pr._requester.requestJsonAndCheck(
+                "DELETE",
+                f"{self.base_url}/repos/{self.repo}/issues/comments/{issue_comment_id}/reactions/{reaction_id}"
+            )
             return True
         except Exception as e:
             get_logger().exception(f"Failed to remove eyes reaction, error: {e}")
@@ -612,24 +771,24 @@ class GithubProvider(GitProvider):
     def _parse_pr_url(self, pr_url: str) -> Tuple[str, int]:
         parsed_url = urlparse(pr_url)
 
-        if parsed_url.path.startswith("/api/v3"):
+        if parsed_url.path.startswith('/api/v3'):
             parsed_url = urlparse(pr_url.replace("/api/v3", ""))
 
-        path_parts = parsed_url.path.strip("/").split("/")
-        if "api.github.com" in parsed_url.netloc or "/api/v3" in pr_url:
-            if len(path_parts) < 5 or path_parts[3] != "pulls":
+        path_parts = parsed_url.path.strip('/').split('/')
+        if 'api.github.com' in parsed_url.netloc or '/api/v3' in pr_url:
+            if len(path_parts) < 5 or path_parts[3] != 'pulls':
                 raise ValueError("The provided URL does not appear to be a GitHub PR URL")
-            repo_name = "/".join(path_parts[1:3])
+            repo_name = '/'.join(path_parts[1:3])
             try:
                 pr_number = int(path_parts[4])
             except ValueError as e:
                 raise ValueError("Unable to convert PR number to integer") from e
             return repo_name, pr_number
 
-        if len(path_parts) < 4 or path_parts[2] != "pull":
+        if len(path_parts) < 4 or path_parts[2] != 'pull':
             raise ValueError("The provided URL does not appear to be a GitHub PR URL")
 
-        repo_name = "/".join(path_parts[:2])
+        repo_name = '/'.join(path_parts[:2])
         try:
             pr_number = int(path_parts[3])
         except ValueError as e:
@@ -640,24 +799,24 @@ class GithubProvider(GitProvider):
     def _parse_issue_url(self, issue_url: str) -> Tuple[str, int]:
         parsed_url = urlparse(issue_url)
 
-        if "github.com" not in parsed_url.netloc:
-            raise ValueError("The provided URL is not a valid GitHub URL")
+        if parsed_url.path.startswith('/api/v3'): #Check if came from github app
+            parsed_url = urlparse(issue_url.replace("/api/v3", ""))
 
-        path_parts = parsed_url.path.strip("/").split("/")
-        if "api.github.com" in parsed_url.netloc:
-            if len(path_parts) < 5 or path_parts[3] != "issues":
+        path_parts = parsed_url.path.strip('/').split('/')
+        if 'api.github.com' in parsed_url.netloc or '/api/v3' in issue_url: #Check if came from github app
+            if len(path_parts) < 5 or path_parts[3] != 'issues':
                 raise ValueError("The provided URL does not appear to be a GitHub ISSUE URL")
-            repo_name = "/".join(path_parts[1:3])
+            repo_name = '/'.join(path_parts[1:3])
             try:
                 issue_number = int(path_parts[4])
             except ValueError as e:
                 raise ValueError("Unable to convert issue number to integer") from e
             return repo_name, issue_number
 
-        if len(path_parts) < 4 or path_parts[2] != "issues":
+        if len(path_parts) < 4 or path_parts[2] != 'issues':
             raise ValueError("The provided URL does not appear to be a GitHub PR issue")
 
-        repo_name = "/".join(path_parts[:2])
+        repo_name = '/'.join(path_parts[:2])
         try:
             issue_number = int(path_parts[3])
         except ValueError as e:
@@ -666,9 +825,9 @@ class GithubProvider(GitProvider):
         return repo_name, issue_number
 
     def _get_github_client(self):
-        deployment_type = get_settings().get("GITHUB.DEPLOYMENT_TYPE", "user")
-
-        if deployment_type == "app":
+        self.deployment_type = get_settings().get("GITHUB.DEPLOYMENT_TYPE", "user")
+        self.auth = None
+        if self.deployment_type == 'app':
             try:
                 private_key = get_settings().github.private_key
                 app_id = get_settings().github.app_id
@@ -676,39 +835,54 @@ class GithubProvider(GitProvider):
                 raise ValueError("GitHub app ID and private key are required when using GitHub app deployment") from e
             if not self.installation_id:
                 raise ValueError("GitHub app installation ID is required when using GitHub app deployment")
-            auth = AppAuthentication(app_id=app_id, private_key=private_key, installation_id=self.installation_id)
-            return Github(app_auth=auth, base_url=self.base_url)
-
-        if deployment_type == "user":
+            auth = AppAuthentication(app_id=app_id, private_key=private_key,
+                                     installation_id=self.installation_id)
+            self.auth = auth
+        elif self.deployment_type == 'user':
             try:
                 token = get_settings().github.user_token
             except AttributeError as e:
-                raise ValueError("GitHub token is required when using user deployment. See: https://github.com/khulnasoft/pr-insight#method-2-run-from-source") from e
-            return Github(auth=Auth.Token(token), base_url=self.base_url)
+                raise ValueError(
+                    "GitHub token is required when using user deployment. See: "
+                    "https://github.com/khulnasoft/pr-insight#method-2-run-from-source") from e
+            self.auth = Auth.Token(token)
+        if self.auth:
+            return Github(auth=self.auth, base_url=self.base_url)
+        else:
+            raise ValueError("Could not authenticate to GitHub")
 
     def _get_repo(self):
-        if hasattr(self, "repo_obj") and hasattr(self.repo_obj, "full_name") and self.repo_obj.full_name == self.repo:
+        if hasattr(self, 'repo_obj') and \
+                hasattr(self.repo_obj, 'full_name') and \
+                self.repo_obj.full_name == self.repo:
             return self.repo_obj
         else:
             self.repo_obj = self.github_client.get_repo(self.repo)
             return self.repo_obj
+
 
     def _get_pr(self):
         return self._get_repo().get_pull(self.pr_num)
 
     def get_pr_file_content(self, file_path: str, branch: str) -> str:
         try:
-            file_content_str = str(self._get_repo().get_contents(file_path, ref=branch).decoded_content.decode())
+            file_content_str = str(
+                self._get_repo()
+                .get_contents(file_path, ref=branch)
+                .decoded_content.decode()
+            )
         except Exception:
             file_content_str = ""
         return file_content_str
 
-    def create_or_update_pr_file(self, file_path: str, branch: str, contents="", message="") -> None:
+    def create_or_update_pr_file(
+        self, file_path: str, branch: str, contents="", message=""
+    ) -> None:
         try:
             file_obj = self._get_repo().get_contents(file_path, ref=branch)
-            sha1 = file_obj.sha
+            sha1=file_obj.sha
         except Exception:
-            sha1 = ""
+            sha1=""
         self.repo_obj.update_file(
             path=file_path,
             message=message,
@@ -722,23 +896,28 @@ class GithubProvider(GitProvider):
 
     def publish_labels(self, pr_types):
         try:
-            label_color_map = {"Bug fix": "1d76db", "Tests": "e99695", "Bug fix with tests": "c5def5", "Enhancement": "bfd4f2", "Documentation": "d4c5f9", "Other": "d1bcf9"}
+            label_color_map = {"Bug fix": "1d76db", "Tests": "e99695", "Bug fix with tests": "c5def5",
+                               "Enhancement": "bfd4f2", "Documentation": "d4c5f9",
+                               "Other": "d1bcf9"}
             post_parameters = []
             for p in pr_types:
                 color = label_color_map.get(p, "d1bcf9")  # default to "Other" color
                 post_parameters.append({"name": p, "color": color})
-            headers, data = self.pr._requester.requestJsonAndCheck("PUT", f"{self.pr.issue_url}/labels", input=post_parameters)
+            headers, data = self.pr._requester.requestJsonAndCheck(
+                "PUT", f"{self.pr.issue_url}/labels", input=post_parameters
+            )
         except Exception as e:
             get_logger().warning(f"Failed to publish labels, error: {e}")
 
     def get_pr_labels(self, update=False):
         try:
             if not update:
-                labels = self.pr.labels
+                labels =self.pr.labels
                 return [label.name for label in labels]
-            else:  # obtain the latest labels. Maybe they changed while the AI was running
-                headers, labels = self.pr._requester.requestJsonAndCheck("GET", f"{self.pr.issue_url}/labels")
-                return [label["name"] for label in labels]
+            else: # obtain the latest labels. Maybe they changed while the AI was running
+                headers, labels = self.pr._requester.requestJsonAndCheck(
+                    "GET", f"{self.pr.issue_url}/labels")
+                return [label['name'] for label in labels]
 
         except Exception as e:
             get_logger().exception(f"Failed to get labels, error: {e}")
@@ -768,12 +947,13 @@ class GithubProvider(GitProvider):
 
     def generate_link_to_relevant_line_number(self, suggestion) -> str:
         try:
-            relevant_file = suggestion["relevant_file"].strip("`").strip("'").strip("\n")
-            relevant_line_str = suggestion["relevant_line"].strip("\n")
+            relevant_file = suggestion['relevant_file'].strip('`').strip("'").strip('\n')
+            relevant_line_str = suggestion['relevant_line'].strip('\n')
             if not relevant_line_str:
                 return ""
 
-            position, absolute_position = find_line_number_of_relevant_line_in_file(self.diff_files, relevant_file, relevant_line_str)
+            position, absolute_position = find_line_number_of_relevant_line_in_file \
+                (self.diff_files, relevant_file, relevant_line_str)
 
             if absolute_position != -1:
                 # # link to right file only
@@ -781,7 +961,7 @@ class GithubProvider(GitProvider):
                 #        + "#" + f"L{absolute_position}"
 
                 # link to diff
-                sha_file = hashlib.sha256(relevant_file.encode("utf-8")).hexdigest()
+                sha_file = hashlib.sha256(relevant_file.encode('utf-8')).hexdigest()
                 link = f"{self.base_url_html}/{self.repo}/pull/{self.pr_num}/files#diff-{sha_file}R{absolute_position}"
                 return link
         except Exception as e:
@@ -790,7 +970,7 @@ class GithubProvider(GitProvider):
         return ""
 
     def get_line_link(self, relevant_file: str, relevant_line_start: int, relevant_line_end: int = None) -> str:
-        sha_file = hashlib.sha256(relevant_file.encode("utf-8")).hexdigest()
+        sha_file = hashlib.sha256(relevant_file.encode('utf-8')).hexdigest()
         if relevant_line_start == -1:
             link = f"{self.base_url_html}/{self.repo}/pull/{self.pr_num}/files#diff-{sha_file}"
         elif relevant_line_end:
@@ -821,7 +1001,8 @@ class GithubProvider(GitProvider):
         line_end = component_range.line_end + 1
         # link = (f"https://github.com/{self.repo}/blob/{self.last_commit_id.sha}/{filepath}/"
         #         f"#L{line_start}-L{line_end}")
-        link = f"{self.base_url_html}/{self.repo}/blob/{self.last_commit_id.sha}/{filepath}/#L{line_start}-L{line_end}"
+        link = (f"{self.base_url_html}/{self.repo}/blob/{self.last_commit_id.sha}/{filepath}/"
+                f"#L{line_start}-L{line_end}")
 
         return link
 
@@ -853,7 +1034,8 @@ class GithubProvider(GitProvider):
                 }}
             }}
             """
-            response_tuple = self.github_client._Github__requester.requestJson("POST", "/graphql", input={"query": query})
+            response_tuple = self.github_client._Github__requester.requestJson("POST", "/graphql",
+                                                                               input={"query": query})
 
             # Extract the JSON response from the tuple and parses it
             if isinstance(response_tuple, tuple) and len(response_tuple) == 3:
@@ -861,6 +1043,7 @@ class GithubProvider(GitProvider):
             else:
                 get_logger().error(f"Unexpected response format: {response_tuple}")
                 return sub_issues
+
 
             issue_id = response_json.get("data", {}).get("repository", {}).get("issue", {}).get("id")
 
@@ -882,7 +1065,8 @@ class GithubProvider(GitProvider):
                 }}
             }}
             """
-            sub_issues_response_tuple = self.github_client._Github__requester.requestJson("POST", "/graphql", input={"query": sub_issues_query})
+            sub_issues_response_tuple = self.github_client._Github__requester.requestJson("POST", "/graphql", input={
+                "query": sub_issues_query})
 
             # Extract the JSON response from the tuple and parses it
             if isinstance(sub_issues_response_tuple, tuple) and len(sub_issues_response_tuple) == 3:
@@ -894,7 +1078,7 @@ class GithubProvider(GitProvider):
             if not sub_issues_response_json.get("data", {}).get("node", {}).get("subIssues"):
                 get_logger().error("Invalid sub-issues response structure")
                 return sub_issues
-
+    
             nodes = sub_issues_response_json.get("data", {}).get("node", {}).get("subIssues", {}).get("nodes", [])
             get_logger().info(f"Github Sub-issues fetched: {len(nodes)}", artifact={"nodes": nodes})
 
@@ -918,7 +1102,7 @@ class GithubProvider(GitProvider):
             return False
 
     def calc_pr_statistics(self, pull_request_data: dict):
-        return {}
+            return {}
 
     def validate_comments_inside_hunks(self, code_suggestions):
         """
@@ -926,43 +1110,45 @@ class GithubProvider(GitProvider):
         """
         code_suggestions_copy = copy.deepcopy(code_suggestions)
         diff_files = self.get_diff_files()
-        RE_HUNK_HEADER = re.compile(r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@[ ]?(.*)")
+        RE_HUNK_HEADER = re.compile(
+            r"^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@[ ]?(.*)")
 
         diff_files = set_file_languages(diff_files)
 
         for suggestion in code_suggestions_copy:
             try:
-                relevant_file_path = suggestion["relevant_file"]
+                relevant_file_path = suggestion['relevant_file']
                 for file in diff_files:
                     if file.filename == relevant_file_path:
+
                         # generate on-demand the patches range for the relevant file
                         patch_str = file.patch
-                        if not hasattr(file, "patches_range"):
+                        if not hasattr(file, 'patches_range'):
                             file.patches_range = []
                             patch_lines = patch_str.splitlines()
                             for i, line in enumerate(patch_lines):
-                                if line.startswith("@@"):
+                                if line.startswith('@@'):
                                     match = RE_HUNK_HEADER.match(line)
                                     # identify hunk header
                                     if match:
                                         section_header, size1, size2, start1, start2 = extract_hunk_headers(match)
-                                        file.patches_range.append({"start": start2, "end": start2 + size2 - 1})
+                                        file.patches_range.append({'start': start2, 'end': start2 + size2 - 1})
 
                         patches_range = file.patches_range
-                        comment_start_line = suggestion.get("relevant_lines_start", None)
-                        comment_end_line = suggestion.get("relevant_lines_end", None)
-                        original_suggestion = suggestion.get("original_suggestion", None)  # needed for diff code
+                        comment_start_line = suggestion.get('relevant_lines_start', None)
+                        comment_end_line = suggestion.get('relevant_lines_end', None)
+                        original_suggestion = suggestion.get('original_suggestion', None) # needed for diff code
                         if not comment_start_line or not comment_end_line or not original_suggestion:
                             continue
 
                         # check if the comment is inside a valid hunk
                         is_valid_hunk = False
-                        min_distance = float("inf")
+                        min_distance = float('inf')
                         patch_range_min = None
                         # find the hunk that contains the comment, or the closest one
                         for i, patch_range in enumerate(patches_range):
-                            d1 = comment_start_line - patch_range["start"]
-                            d2 = patch_range["end"] - comment_end_line
+                            d1 = comment_start_line - patch_range['start']
+                            d2 = patch_range['end'] - comment_end_line
                             if d1 >= 0 and d2 >= 0:  # found a valid hunk
                                 is_valid_hunk = True
                                 min_distance = 0
@@ -978,24 +1164,62 @@ class GithubProvider(GitProvider):
                         if not is_valid_hunk:
                             if min_distance < 10:  # 10 lines - a reasonable distance to consider the comment inside the hunk
                                 # make the suggestion non-committable, yet multi line
-                                suggestion["relevant_lines_start"] = max(suggestion["relevant_lines_start"], patch_range_min["start"])
-                                suggestion["relevant_lines_end"] = min(suggestion["relevant_lines_end"], patch_range_min["end"])
-                                body = suggestion["body"].strip()
+                                suggestion['relevant_lines_start'] = max(suggestion['relevant_lines_start'], patch_range_min['start'])
+                                suggestion['relevant_lines_end'] = min(suggestion['relevant_lines_end'], patch_range_min['end'])
+                                body = suggestion['body'].strip()
 
                                 # present new diff code in collapsible
-                                existing_code = original_suggestion["existing_code"].rstrip() + "\n"
-                                improved_code = original_suggestion["improved_code"].rstrip() + "\n"
-                                diff = difflib.unified_diff(existing_code.split("\n"), improved_code.split("\n"), n=999)
+                                existing_code = original_suggestion['existing_code'].rstrip() + "\n"
+                                improved_code = original_suggestion['improved_code'].rstrip() + "\n"
+                                diff = difflib.unified_diff(existing_code.split('\n'),
+                                                            improved_code.split('\n'), n=999)
                                 patch_orig = "\n".join(diff)
-                                patch = "\n".join(patch_orig.splitlines()[5:]).strip("\n")
+                                patch = "\n".join(patch_orig.splitlines()[5:]).strip('\n')
                                 diff_code = f"\n\n<details><summary>New proposed code:</summary>\n\n```diff\n{patch.rstrip()}\n```"
                                 # replace ```suggestion ... ``` with diff_code, using regex:
-                                body = re.sub(r"```suggestion.*?```", diff_code, body, flags=re.DOTALL)
+                                body = re.sub(r'```suggestion.*?```', diff_code, body, flags=re.DOTALL)
                                 body += "\n\n</details>"
-                                suggestion["body"] = body
-                                get_logger().info(f"Comment was moved to a valid hunk, start_line={suggestion['relevant_lines_start']}, end_line={suggestion['relevant_lines_end']}, file={file.filename}")
+                                suggestion['body'] = body
+                                get_logger().info(f"Comment was moved to a valid hunk, "
+                                                  f"start_line={suggestion['relevant_lines_start']}, end_line={suggestion['relevant_lines_end']}, file={file.filename}")
                             else:
-                                get_logger().error(f"Comment is not inside a valid hunk, start_line={suggestion['relevant_lines_start']}, end_line={suggestion['relevant_lines_end']}, file={file.filename}")
+                                get_logger().error(f"Comment is not inside a valid hunk, "
+                                                   f"start_line={suggestion['relevant_lines_start']}, end_line={suggestion['relevant_lines_end']}, file={file.filename}")
             except Exception as e:
                 get_logger().error(f"Failed to process patch for committable comment, error: {e}")
         return code_suggestions_copy
+
+    #Clone related
+    def _prepare_clone_url_with_token(self, repo_url_to_clone: str) -> str | None:
+        scheme = "https://"
+
+        #For example, to clone:
+        #https://github.com/khulnasoft/pr-insight-pro.git
+        #Need to embed inside the github token:
+        #https://<token>@github.com/khulnasoft/pr-insight-pro.git
+
+        github_token = self.auth.token
+        github_base_url = self.base_url_html
+        if not all([github_token, github_base_url]):
+            get_logger().error("Either missing auth token or missing base url")
+            return None
+        if scheme not in github_base_url:
+            get_logger().error(f"Base url: {github_base_url} is missing prefix: {scheme}")
+            return None
+        github_com = github_base_url.split(scheme)[1]  # e.g. 'github.com' or github.<org>.com
+        if not github_com:
+            get_logger().error(f"Base url: {github_base_url} has an empty base url")
+            return None
+        if github_com not in repo_url_to_clone:
+            get_logger().error(f"url to clone: {repo_url_to_clone} does not contain {github_com}")
+            return None
+        repo_full_name = repo_url_to_clone.split(github_com)[-1]
+        if not repo_full_name:
+            get_logger().error(f"url to clone: {repo_url_to_clone} is malformed")
+            return None
+
+        clone_url = scheme
+        if self.deployment_type == 'app':
+            clone_url += "git:"
+        clone_url += f"{github_token}@{github_com}{repo_full_name}"
+        return clone_url

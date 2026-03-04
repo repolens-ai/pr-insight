@@ -1,20 +1,14 @@
-site_name: PR-Insight (formerly known as PR-Insight)
-repo_url: https://github.com/KhulnaSoft/pr-insight
-repo_name: KhulnaSoft/pr-insight
+site_name: PR-Insight
+repo_url: https://github.com/repolens-ai/pr-insight
+repo_name: Repolens-ai/pr-insight
 
 nav:
   - Overview:
     - 'index.md'
-    - 💎 PR-Insight Pro: 'overview/pr_insight_pro.md'
     - Data Privacy: 'overview/data_privacy.md'
   - Installation:
     - 'installation/index.md'
-    - Locally: 'installation/locally.md'
-    - GitHub: 'installation/github.md'
-    - GitLab: 'installation/gitlab.md'
-    - BitBucket: 'installation/bitbucket.md'
-    - Azure DevOps: 'installation/azure.md'
-    - 💎 PR-Insight Pro: 'installation/pr_insight_pro.md'
+    - PR-Insight: 'installation/pr_insight.md'
   - Usage Guide:
     - 'usage-guide/index.md'
     - Introduction: 'usage-guide/introduction.md'
@@ -23,47 +17,35 @@ nav:
     - Managing Mail Notifications: 'usage-guide/mail_notifications.md'
     - Changing a Model: 'usage-guide/changing_a_model.md'
     - Additional Configurations: 'usage-guide/additional_configurations.md'
-    - 💎 PR-Insight Pro Models: 'usage-guide/PR_insight_pro_models'
+    - Frequently Asked Questions: 'faq/index.md'
   - Tools:
-    - 'tools/index.md'
-    - Describe: 'tools/describe.md'
-    - Review: 'tools/review.md'
-    - Improve: 'tools/improve.md'
-    - Ask: 'tools/ask.md'
-    - Update Changelog: 'tools/update_changelog.md'
-    - Similar Issues: 'tools/similar_issues.md'
-    - Help: 'tools/help.md'
-    - 💎 Analyze: 'tools/analyze.md'
-    - 💎 Test: 'tools/test.md'
-    - 💎 Improve Component: 'tools/improve_component.md'
-    - 💎 Documentation: 'tools/documentation.md'
-    - 💎 Custom Labels: 'tools/custom_labels.md'
-    - 💎 Custom Prompt: 'tools/custom_prompt.md'
-    - 💎 CI Feedback: 'tools/ci_feedback.md'
-    - 💎 Similar Code: 'tools/similar_code.md'
+     - 'tools/index.md'
+     - Describe: 'tools/describe.md'
+     - Review: 'tools/review.md'
+     - Improve: 'tools/improve.md'
+     - Ask: 'tools/ask.md'
+     - Add Docs: 'tools/add_docs.md'
+     - Generate Labels: 'tools/generate_labels.md'
+     - Similar Issues: 'tools/similar_issues.md'
+     - Help: 'tools/help.md'
+     - Help Docs: 'tools/help_docs.md'
+     - Update Changelog: 'tools/update_changelog.md'
   - Core Abilities:
       - 'core-abilities/index.md'
-      - Fetching ticket context: 'core-abilities/fetching_ticket_context.md'
-      - Local and global metadata: 'core-abilities/metadata.md'
-      - Dynamic context: 'core-abilities/dynamic_context.md'
-      - Self-reflection: 'core-abilities/self_reflection.md'
-      - Impact evaluation: 'core-abilities/impact_evaluation.md'
-      - Interactivity: 'core-abilities/interactivity.md'
       - Compression strategy: 'core-abilities/compression_strategy.md'
-      - Code-oriented YAML: 'core-abilities/code_oriented_yaml.md'
-      - Static code analysis: 'core-abilities/static_code_analysis.md'
-      - Code Fine-tuning Benchmark: 'finetuning_benchmark/index.md'
-  - Chrome Extension:
-      - PR-Insight Chrome Extension: 'chrome-extension/index.md'
-      - Features: 'chrome-extension/features.md'
-      - Data Privacy: 'chrome-extension/data_privacy.md'
-  - FAQ:
-      - FAQ: 'faq/index.md'
+      - Dynamic context: 'core-abilities/dynamic_context.md'
+      - Fetching ticket context: 'core-abilities/fetching_ticket_context.md'
+      - Interactivity: 'core-abilities/interactivity.md'
+      - Local and global metadata: 'core-abilities/metadata.md'
+      - Self-reflection: 'core-abilities/self_reflection.md'
+  - PR Benchmark:
+      - PR Benchmark: 'pr_benchmark/index.md'
+
 #  - Code Fine-tuning Benchmark: 'finetuning_benchmark/index.md'
 
 theme:
-  logo: assets/logo.svg
-  favicon: assets/favicon.ico
+  logo: assets/favicon.svg
+  favicon: assets/favicon.svg
   name: material
   icon:
     repo: fontawesome/brands/github
@@ -79,7 +61,7 @@ theme:
     - content.tabs.link
     - content.code.annotation
     - content.code.copy
-    - content.tabs.link
+    - announce.dismiss
   language: en
   custom_dir: overrides
 
@@ -112,20 +94,7 @@ extra:
   generator: false
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/KhulnaSoft
-    - icon: fontawesome/brands/discord
-      link: https://discord.com/invite/SgSxuQ65GF
-    - icon: fontawesome/brands/youtube
-      link: https://www.youtube.com/@KhulnaSoft
-    - icon: fontawesome/brands/linkedin
-      link: https://www.linkedin.com/company/khulnasoft
-    - icon: fontawesome/brands/twitter
-      link: https://twitter.com/KhulnaSoft
-    - icon: fontawesome/brands/instagram
-      link: https://www.instagram.com/khulnasoft/
-  analytics:
-    provider: custom
-    property: ${{ secrets.GOOGLE_ANALYTICS_ID }}
+      link: https://github.com/repolens-ai/pr-insight
 
 extra_css:
   - css/custom.css
@@ -144,6 +113,11 @@ markdown_extensions:
   - pymdownx.mark
   - md_in_html
   - attr_list
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - pymdownx.tabbed:
+      alternate_style: true
   - toc:
       title: On this page
       toc_depth: 3
@@ -151,4 +125,4 @@ markdown_extensions:
 
 
 copyright: |
-  &copy; 2024 <a href="https://www.khulnasoft.com/"  target="_blank" rel="noopener">KhulnaSoft</a>
+  &copy; 2026 PR-Insight Contributors

@@ -3,10 +3,10 @@ import json
 import os
 from typing import Union
 
+from pr_insight.agent.pr_insight import PRAgent
 from pr_insight.config_loader import get_settings
 from pr_insight.git_providers import get_git_provider
 from pr_insight.git_providers.utils import apply_repo_settings
-from pr_insight.insight.pr_insight import PRInsight
 from pr_insight.log import get_logger
 from pr_insight.servers.github_app import handle_line_comments
 from pr_insight.tools.pr_code_suggestions import PRCodeSuggestions
@@ -18,7 +18,7 @@ def is_true(value: Union[str, bool]) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() == "true"
+        return value.lower() == 'true'
     return False
 
 
@@ -32,11 +32,11 @@ def get_setting_or_env(key: str, default: Union[str, bool] = None) -> Union[str,
 
 async def run_action():
     # Get environment variables
-    GITHUB_EVENT_NAME = os.environ.get("GITHUB_EVENT_NAME")
-    GITHUB_EVENT_PATH = os.environ.get("GITHUB_EVENT_PATH")
-    OPENAI_KEY = os.environ.get("OPENAI_KEY") or os.environ.get("OPENAI.KEY")
-    OPENAI_ORG = os.environ.get("OPENAI_ORG") or os.environ.get("OPENAI.ORG")
-    GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN")
+    GITHUB_EVENT_NAME = os.environ.get('GITHUB_EVENT_NAME')
+    GITHUB_EVENT_PATH = os.environ.get('GITHUB_EVENT_PATH')
+    OPENAI_KEY = os.environ.get('OPENAI_KEY') or os.environ.get('OPENAI.KEY')
+    OPENAI_ORG = os.environ.get('OPENAI_ORG') or os.environ.get('OPENAI.ORG')
+    GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
     # get_settings().set("CONFIG.PUBLISH_OUTPUT_PROGRESS", False)
 
     # Check if required environment variables are set
@@ -65,7 +65,7 @@ async def run_action():
 
     # Load the event payload
     try:
-        with open(GITHUB_EVENT_PATH, "r") as f:
+        with open(GITHUB_EVENT_PATH, 'r') as f:
             event_payload = json.load(f)
     except json.decoder.JSONDecodeError as e:
         print(f"Failed to parse JSON: {e}")
@@ -80,8 +80,32 @@ async def run_action():
     except Exception as e:
         get_logger().info(f"github action: failed to apply repo settings: {e}")
 
+    # Append the response language in the extra instructions
+    try:
+        response_language = get_settings().config.get('response_language', 'en-us')
+        if response_language.lower() != 'en-us':
+            get_logger().info(f'User has set the response language to: {response_language}')
+
+            lang_instruction_text = f"Your response MUST be written in the language corresponding to locale code: '{response_language}'. This is crucial."
+            separator_text = "\n======\n\nIn addition, "
+
+            for key in get_settings():
+                setting = get_settings().get(key)
+                if str(type(setting)) == "<class 'dynaconf.utils.boxing.DynaBox'>":
+                    if key.lower() in ['pr_description', 'pr_code_suggestions', 'pr_reviewer']:
+                        if hasattr(setting, 'extra_instructions'):
+                            extra_instructions = setting.extra_instructions
+
+                            if lang_instruction_text not in str(extra_instructions):
+                                updated_instructions = (
+                                    str(extra_instructions) + separator_text + lang_instruction_text
+                                    if extra_instructions else lang_instruction_text
+                                )
+                                setting.extra_instructions = updated_instructions
+    except Exception as e:
+        get_logger().info(f"github action: failed to apply language-specific instructions: {e}")
     # Handle pull request opened event
-    if GITHUB_EVENT_NAME == "pull_request":
+    if GITHUB_EVENT_NAME == "pull_request" or GITHUB_EVENT_NAME == "pull_request_target":
         action = event_payload.get("action")
 
         # Retrieve the list of actions from the configuration
@@ -123,7 +147,7 @@ async def run_action():
             comment_body = event_payload.get("comment", {}).get("body")
             try:
                 if GITHUB_EVENT_NAME == "pull_request_review_comment":
-                    if "/ask" in comment_body:
+                    if '/ask' in comment_body:
                         comment_body = handle_line_comments(event_payload, comment_body)
             except Exception as e:
                 get_logger().error(f"Failed to handle line comments: {e}")
@@ -147,10 +171,14 @@ async def run_action():
                     comment_id = event_payload.get("comment", {}).get("id")
                     provider = get_git_provider()(pr_url=url)
                     if is_pr:
-                        await PRInsight().handle_request(url, body, notify=lambda: provider.add_eyes_reaction(comment_id, disable_eyes=disable_eyes))
+                        await PRAgent().handle_request(
+                            url, body, notify=lambda: provider.add_eyes_reaction(
+                                comment_id, disable_eyes=disable_eyes
+                            )
+                        )
                     else:
-                        await PRInsight().handle_request(url, body)
+                        await PRAgent().handle_request(url, body)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     asyncio.run(run_action())

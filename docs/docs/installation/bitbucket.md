@@ -1,6 +1,5 @@
 ## Run as a Bitbucket Pipeline
 
-
 You can use the Bitbucket Pipeline system to run PR-Insight on every pull request open or update.
 
 1. Add the following file in your repository bitbucket-pipelines.yml
@@ -11,26 +10,23 @@ pipelines:
       '**':
         - step:
             name: PR Insight Review
-            image: python:3.10
-            services:
-              - docker
+            image: khulnasoft/pr-insight:latest
             script:
-              - docker run -e CONFIG.GIT_PROVIDER=bitbucket -e OPENAI.KEY=$OPENAI_API_KEY -e BITBUCKET.BEARER_TOKEN=$BITBUCKET_BEARER_TOKEN khulnasoft/pr-insight:latest --pr_url=https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/pull-requests/$BITBUCKET_PR_ID review
+              - pr-insight --pr_url=https://bitbucket.org/$BITBUCKET_WORKSPACE/$BITBUCKET_REPO_SLUG/pull-requests/$BITBUCKET_PR_ID review
 ```
 
 2. Add the following secure variables to your repository under Repository settings > Pipelines > Repository variables.
-OPENAI_API_KEY: `<your key>`
-BITBUCKET_BEARER_TOKEN: `<your token>`
+
+   - CONFIG__GIT_PROVIDER: `bitbucket`
+   - OPENAI__KEY: `<your key>`
+   - BITBUCKET__AUTH_TYPE: `basic` or `bearer` (default is `bearer`)
+   - BITBUCKET__BEARER_TOKEN: `<your token>` (required when auth_type is bearer)
+   - BITBUCKET__BASIC_TOKEN: `<your token>` (required when auth_type is basic)
 
 You can get a Bitbucket token for your repository by following Repository Settings -> Security -> Access Tokens.
+For basic auth, you can generate a base64 encoded token from your username:password combination.
 
 Note that comments on a PR are not supported in Bitbucket Pipeline.
-
-
-## Run using KhulnaSoft-hosted Bitbucket app 💎
-
-Please contact visit [PR-Insight Pro](https://www.khulnasoft.com/pricing/) if you're interested in a hosted BitBucket app solution that provides full functionality including PR reviews and comment handling. It's based on the [bitbucket_app.py](https://github.com/KhulnaSoft/pr-insight/blob/main/pr_insight/git_providers/bitbucket_provider.py) implementation.
-
 
 ## Bitbucket Server and Data Center
 
@@ -43,6 +39,13 @@ Generate the token and add it to .secret.toml under `bitbucket_server` section
 bearer_token = "<your key>"
 ```
 
+Don't forget to also set the URL of your Bitbucket Server instance (either in `.secret.toml` or in `configuration.toml`):
+
+```toml
+[bitbucket_server]
+url = "<full URL to your Bitbucket instance, e.g.: https://git.bitbucket.com>"
+```
+
 ### Run it as CLI
 
 Modify `configuration.toml`:
@@ -51,20 +54,24 @@ Modify `configuration.toml`:
 git_provider="bitbucket_server"
 ```
 
+
+
 and pass the Pull request URL:
+
 ```shell
-python cli.py --pr_url https://git.onpreminstanceofbitbucket.com/projects/PROJECT/repos/REPO/pull-requests/1 review
+python cli.py --pr_url https://git.on-prem-instance-of-bitbucket.com/projects/PROJECT/repos/REPO/pull-requests/1 review
 ```
 
 ### Run it as service
 
 To run PR-Insight as webhook, build the docker image:
-```
+
+```bash
 docker build . -t khulnasoft/pr-insight:bitbucket_server_webhook --target bitbucket_server_webhook -f docker/Dockerfile
 docker push khulnasoft/pr-insight:bitbucket_server_webhook  # Push to your Docker repository
 ```
 
 Navigate to `Projects` or `Repositories`, `Settings`, `Webhooks`, `Create Webhook`.
-Fill the name and URL, Authentication None select the Pull Request Opened checkbox to receive that event as webhook.
+Fill in the name and URL. For Authentication, select 'None'. Select the 'Pull Request Opened' checkbox to receive that event as a webhook.
 
 The URL should end with `/webhook`, for example: https://domain.com/webhook

@@ -1,11 +1,10 @@
-## TL;DR
+`Supported Git Platforms: GitHub, GitLab, Bitbucket`
 
 PR-Insight implements a **self-reflection** process where the AI model reflects, scores, and re-ranks its own suggestions, eliminating irrelevant or incorrect ones.
 This approach improves the quality and relevance of suggestions, saving users time and enhancing their experience.
 Configuration options allow users to set a score threshold for further filtering out suggestions.
 
 ## Introduction - Efficient Review with Hierarchical Presentation
-
 
 Given that not all generated code suggestions will be relevant, it is crucial to enable users to review them in a fast and efficient way, allowing quick identification and filtering of non-applicable ones.
 
@@ -42,9 +41,9 @@ This results in a more refined and valuable set of suggestions for the user, sav
 ![self_reflection](https://khulnasoft.com/images/pr_insight/self_reflection1.png){width=768}
 ![self_reflection](https://khulnasoft.com/images/pr_insight/self_reflection2.png){width=768}
 
-
 ## Appendix - Relevant Configuration Options
-```
+
+```toml
 [pr_code_suggestions]
-suggestions_score_threshold	= 0 # Filter out suggestions with a score below this threshold (0-10)
+suggestions_score_threshold = 0 # Filter out suggestions with a score below this threshold (0-10)
 ```

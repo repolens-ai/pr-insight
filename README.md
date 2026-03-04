@@ -1,228 +1,259 @@
-# PR-Insight
+<a href="https://github.com/khulnasoft/pr-insight/commits/main">
+<img alt="GitHub" src="https://img.shields.io/github/last-commit/khulnasoft/pr-insight/main?style=for-the-badge" height="20">
+</a>
 
-[![Made by Khulnasoft](https://img.shields.io/badge/Made%20by%20Khulnasoft-000000.svg?style=flat-square&logo=Khulnasoft&labelColor=000)](https://khulnasoft.com)
-[![GitHub license](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://github.com/khulnasoft/pr-insight/blob/main/LICENSE)
-[![CI status](https://img.shields.io/github/actions/workflow/status/khulnasoft/pr-insight/build-and-test.yaml?event=push&branch=main&style=flat-square&labelColor=000000)](https://github.com/khulnasoft/pr-insight/actions/workflows/build-and-test.yaml?query=event%3Apush+branch%3Amain)
-[![Chrome Extension](https://img.shields.io/badge/Chrome-Extension-violet)](https://chromewebstore.google.com/detail/pr-insight-chrome-extension/ephlnjeghhogofkifjloamocljapahnl)
-[![Code Benchmark](https://img.shields.io/badge/Code-Benchmark-blue)](https://khulnasoft.github.io/pr-insight/finetuning_benchmark/)
-[![Discord](https://badgen.net/badge/icon/discord?icon=discord&label&color=purple)](https://discord.gg/NfDj6xsR)
-[![Twitter Follow](https://img.shields.io/twitter/follow/khulnasoft)](https://twitter.com/khulnasoft)
+<br />
 
+# 🚀 PR Insight - The Original Open-Source PR Reviewer.
 
-### [Documentation](https://khulnasoft.github.io/pr-insight/)
-- See the [Installation Guide](https://khulnasoft.github.io/pr-insight/installation/) for instructions on installing PR-Insight on different platforms.
+ This repository contains the open-source PR Insight Project. 
+ It is not the Repolens free tier.
+ 
+Try the free version on our website.
 
-- See the [Usage Guide](https://khulnasoft.github.io/pr-insight/usage-guide/) for instructions on running PR-Insight tools via different interfaces, such as CLI, PR Comments, or by automatically triggering them when a new PR is opened.
+👉[Get Started Now](www.khulnasoft.com/get-started/)
 
-- See the [Tools Guide](https://khulnasoft.github.io/pr-insight/tools/) for a detailed description of the different tools, and the available configurations for each tool.
-
+PR-Insight is an open-source, AI-powered code review agent and a community-maintained legacy project of Repolens. It is distinct from Repolens’s primary AI code review offering, which provides a feature-rich, context-aware experience. Repolens now offers a free tier that integrates seamlessly with GitHub, GitLab, Bitbucket, and Azure DevOps for high-quality automated reviews.
 
 ## Table of Contents
-- [Table of Contents](#table-of-contents)
-- [News and Updates](#news-and-updates)
-  - [May 31, 2024](#may-31-2024)
-  - [May 23, 2024](#may-23-2024)
-  - [May 21, 2024](#may-21-2024)
-- [Overview](#overview)
-- [Example results](#example-results)
-- [Try it now](#try-it-now)
-- [PR-Insight Pro 💎](#pr-insight-pro-)
-- [Why use PR-Insight?](#why-use-pr-insight)
-- [Data privacy](#data-privacy)
-  - [Self-hosted PR-Insight](#self-hosted-pr-insight)
-  - [KhulnaSoft-hosted PR-Insight Pro 💎](#khulnasoft-hosted-pr-insight-pro-)
-  - [PR-Insight Chrome extension](#pr-insight-chrome-extension)
-- [Links](#links)
 
-## News and Updates
+- [Getting Started](#getting-started)
+- [Why Use PR-Insight?](#why-use-pr-insight)
+- [Features](#features)
+- [See It in Action](#see-it-in-action)
+- [Try It Now](#try-it-now)
+- [How It Works](#how-it-works)
+- [Data Privacy](#data-privacy)
+- [Contributing](#contributing)
 
-### May 31, 2024
+## Getting Started
 
-Check out the new [**PR-Insight Code Fine-tuning Benchmark**](https://khulnasoft.github.io/pr-insight/finetuning_benchmark/)
+### 🚀 Quick Start for PR-Insight
 
-### May 23, 2024
+#### 1. Try it Instantly (No Setup)
+Test PR-Insight on any public GitHub repository by commenting `@KhulnaSoft-Agent /improve`
 
-We released a new version of [PR-Insight Chrome extension](https://chromewebstore.google.com/detail/pr-insight-chrome-extension/ephlnjeghhogofkifjloamocljapahnl), with two new features:
+#### 2. GitHub Action (Recommended)
+Add automated PR reviews to your repository with a simple workflow file:
+```yaml
+# .github/workflows/pr-insight.yml
+name: PR Insight
+on:
+  pull_request:
+    types: [opened, synchronize]
+jobs:
+  pr_insight_job:
+    runs-on: ubuntu-latest
+    steps:
+    - name: PR Insight action step
+      uses: khulnasoft/pr-insight@main
+      env:
+        OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+[Full GitHub Action setup guide](https://repolense-merge-docs.khulnasoft.com/installation/github/#run-as-a-github-action)
 
-- PR-Insight filters 🎨
-- Code suggestions interinsights 🔗
+#### 3. CLI Usage (Local Development)
+Run PR-Insight locally on your repository:
+```bash
+pip install pr-insight
+export OPENAI_KEY=your_key_here
+pr-insight --pr_url https://github.com/owner/repo/pull/123 review
+```
+[Complete CLI setup guide](https://repolense-merge-docs.khulnasoft.com/usage-guide/automations_and_usage/#local-repo-cli)
 
-See more [here](https://www.youtube.com/watch?v=v9bJ1frtPcg)
+#### 4. Other Platforms
+- [GitLab webhook setup](https://repolense-merge-docs.khulnasoft.com/installation/gitlab/)
+- [BitBucket app installation](https://repolense-merge-docs.khulnasoft.com/installation/bitbucket/)
+- [Azure DevOps setup](https://repolense-merge-docs.khulnasoft.com/installation/azure/)
 
+[//]: # (## News and Updates)
 
-### May 21, 2024
-Check out KhulnaSoft new project, [**Coverage-Ai**](https://github.com/KhulnaSoft/coverage-ai), that can automatically generate qualified tests to enhance existing test suites, aiming to increase code and behavior coverage efficiently.
+[//]: # ()
+[//]: # (## Aug 8, 2025)
 
+[//]: # ()
+[//]: # (Added full support for GPT-5 models. View the [benchmark results]&#40;https://repolense-merge-docs.khulnasoft.com/pr_benchmark/#pr-benchmark-results&#41; for details on the performance of GPT-5 models in PR-Insight.)
 
-## Overview
+[//]: # ()
+[//]: # ()
+[//]: # (## Jul 17, 2025)
+
+[//]: # ()
+[//]: # (Introducing `/compliance`, a new Repolens Merge 💎 tool that runs comprehensive checks for security, ticket requirements, codebase duplication, and custom organizational rules. )
+
+[//]: # ()
+[//]: # (<img width="384" alt="compliance-image" src="https://khulnasoft.com/images/pr_insight/compliance_partial.png"/>)
+
+[//]: # ()
+[//]: # (Read more about it [here]&#40;https://repolense-merge-docs.khulnasoft.com/tools/compliance/&#41;)
+
+[//]: # ()
+[//]: # ()
+[//]: # (## Jul 1, 2025)
+
+[//]: # (You can now receive automatic feedback from Repolens Merge in your local IDE after each commit. Read more about it [here]&#40;https://github.com/repolens-ai/agents/tree/main/agents/repolense-merge-post-commit&#41;.)
+
+[//]: # ()
+[//]: # ()
+[//]: # (## Jun 21, 2025)
+
+[//]: # ()
+[//]: # (v0.30 was [released]&#40;https://github.com/repolens-ai/pr-insight/releases&#41;)
+
+[//]: # ()
+[//]: # ()
+[//]: # (## Jun 3, 2025)
+
+[//]: # ()
+[//]: # (Repolens Merge now offers a simplified free tier 💎.)
+
+[//]: # (Organizations can use Repolens Merge at no cost, with a [monthly limit]&#40;https://repolense-merge-docs.khulnasoft.com/installation/repolense_merge/#cloud-users&#41; of 75 PR reviews per organization.)
+
+[//]: # ()
+[//]: # ()
+[//]: # (## Apr 30, 2025)
+
+[//]: # ()
+[//]: # (A new feature is now available in the `/improve` tool for Repolens Merge 💎 - Chat on code suggestions.)
+
+[//]: # ()
+[//]: # (<img width="512" alt="image" src="https://khulnasoft.com/images/pr_insight/improve_chat_on_code_suggestions_ask.png" />)
+
+[//]: # ()
+[//]: # (Read more about it [here]&#40;https://repolense-merge-docs.khulnasoft.com/tools/improve/#chat-on-code-suggestions&#41;.)
+
+[//]: # ()
+[//]: # ()
+[//]: # (## Apr 16, 2025)
+
+[//]: # ()
+[//]: # (New tool for Repolens Merge 💎 - `/scan_repo_discussions`.)
+
+[//]: # ()
+[//]: # (<img width="635" alt="image" src="https://khulnasoft.com/images/pr_insight/scan_repo_discussions_2.png" />)
+
+[//]: # ()
+[//]: # (Read more about it [here]&#40;https://repolense-merge-docs.khulnasoft.com/tools/scan_repo_discussions/&#41;.)
+
+## Why Use PR-Insight?
+
+### 🎯 Built for Real Development Teams
+
+**Fast & Affordable**: Each tool (`/review`, `/improve`, `/ask`) uses a single LLM call (~30 seconds, low cost)
+
+**Handles Any PR Size**: Our [PR Compression strategy](https://repolense-merge-docs.khulnasoft.com/core-abilities/#pr-compression-strategy) effectively processes both small and large PRs
+
+**Highly Customizable**: JSON-based prompting allows easy customization of review categories and behavior via [configuration files](pr_insight/settings/configuration.toml)
+
+**Platform Agnostic**: 
+- **Git Providers**: GitHub, GitLab, BitBucket, Azure DevOps, Gitea
+- **Deployment**: CLI, GitHub Actions, Docker, self-hosted, webhooks
+- **AI Models**: OpenAI GPT, Claude, Deepseek, and more
+
+**Open Source Benefits**:
+- Full control over your data and infrastructure
+- Customize prompts and behavior for your team's needs
+- No vendor lock-in
+- Community-driven development
+
+## Features
+
 <div style="text-align:left;">
 
-Supported commands per platform:
+PR-Insight offers comprehensive pull request functionalities integrated with various git providers:
 
-|       |                                                                                                         | GitHub             | Gitlab             | Bitbucket          | Azure DevOps       |
-|-------|---------------------------------------------------------------------------------------------------------|:--------------------:|:--------------------:|:--------------------:|:--------------------:|
-| TOOLS | Review                                                                                                  | ✅ | ✅ | ✅ | ✅ |
-|       | ⮑ Incremental                                                                                           | ✅ |                    |                    |                    |
-|       | ⮑ [SOC2 Compliance](https://khulnasoft.github.io/pr-insight/tools/review/#soc2-ticket-compliance) 💎            | ✅ | ✅ | ✅ | ✅ |
-|       | Describe                                                                                                | ✅ | ✅ | ✅ | ✅ |
-|       | ⮑ [Inline File Summary](https://khulnasoft.github.io/pr-insight/tools/describe#inline-file-summary) 💎          | ✅ |                    |                    |                    |
-|       | Improve                                                                                                 | ✅ | ✅ | ✅ | ✅ |
-|       | ⮑ Extended                                                                                              | ✅ | ✅ | ✅ | ✅ |
-|       | Ask                                                                                                     | ✅ | ✅ | ✅ | ✅ |
-|       | ⮑ [Ask on code lines](https://khulnasoft.github.io/pr-insight/tools/ask#ask-lines)                              | ✅ | ✅ |                    |                    |
-|       | [Custom Prompt](https://khulnasoft.github.io/pr-insight/tools/custom_prompt/) 💎                                | ✅ | ✅ | ✅ | ✅ |
-|       | [Test](https://khulnasoft.github.io/pr-insight/tools/test/) 💎                                                  | ✅ | ✅ |                    | ✅ |
-|       | Reflect and Review                                                                                      | ✅ | ✅ | ✅ | ✅ |
-|       | Update CHANGELOG.md                                                                                     | ✅ | ✅ | ✅ | ✅ |
-|       | Find Similar Issue                                                                                      | ✅ |                    |                    |                    |
-|       | [Add PR Documentation](https://khulnasoft.github.io/pr-insight/tools/documentation/) 💎                         | ✅ | ✅ |                   | ✅ |
-|       | [Custom Labels](https://khulnasoft.github.io/pr-insight/tools/custom_labels/) 💎                                | ✅ | ✅ |                    | ✅ |
-|       | [Analyze](https://khulnasoft.github.io/pr-insight/tools/analyze/) 💎                                            | ✅ | ✅ |                    | ✅ |
-|       | [CI Feedback](https://khulnasoft.github.io/pr-insight/tools/ci_feedback/) 💎                                    | ✅ |                    |                    |                    |
-|       | [Similar Code](https://khulnasoft.github.io/pr-insight/tools/similar_code/) 💎                                  | ✅ |                    |                    |                    |
-|       |                                                                                                         |                    |                    |                    |                    |
-| USAGE | CLI                                                                                                     | ✅ | ✅ | ✅ | ✅ |
-|       | App / webhook                                                                                           | ✅ | ✅ | ✅ | ✅ |
-|       | Tagging bot                                                                                             | ✅ |                    |                    |                    |
-|       | Insights                                                                                                 | ✅ |                    | ✅ |                    |
-|       |                                                                                                         |                    |                    |                    |                    |
-| CORE  | PR compression                                                                                          | ✅ | ✅ | ✅ | ✅ |
-|       | Repo language prioritization                                                                            | ✅ | ✅ | ✅ | ✅ |
-|       | Adaptive and token-aware file patch fitting                                                             | ✅ | ✅ | ✅ | ✅ |
-|       | Multiple models support                                                                                 | ✅ | ✅ | ✅ | ✅ |
-|       | [Static code analysis](https://khulnasoft.github.io/pr-insight/core-abilities/#static-code-analysis) 💎         | ✅ | ✅ | ✅ | ✅ |
-|       | [Global and wiki configurations](https://khulnasoft.github.io/pr-insight/usage-guide/configuration_options/) 💎 | ✅ | ✅ | ✅ | ✅ |
-|       | [PR interactive insights](https://www.khulnasoft.com/images/pr_insight/pr-insights.mp4) 💎                       | ✅ |                    |                    |                    |
-- 💎 means this feature is available only in [PR-Insight Pro](https://www.khulnasoft.com/pricing/)
+|                                                         |                                                                                        | GitHub | GitLab | Bitbucket | Azure DevOps | Gitea |
+|---------------------------------------------------------|----------------------------------------------------------------------------------------|:------:|:------:|:---------:|:------------:|:-----:|
+| [TOOLS](https://repolense-merge-docs.khulnasoft.com/tools/)         | [Describe](https://repolense-merge-docs.khulnasoft.com/tools/describe/)                            |   ✅   |   ✅   |    ✅     |      ✅      |  ✅   |
+|                                                         | [Review](https://repolense-merge-docs.khulnasoft.com/tools/review/)                                |   ✅   |   ✅   |    ✅     |      ✅      |  ✅   |
+|                                                         | [Improve](https://repolense-merge-docs.khulnasoft.com/tools/improve/)                              |   ✅   |   ✅   |    ✅     |      ✅      |  ✅   |
+|                                                         | [Ask](https://repolense-merge-docs.khulnasoft.com/tools/ask/)                                      |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         | ⮑ [Ask on code lines](https://repolense-merge-docs.khulnasoft.com/tools/ask/#ask-lines)            |   ✅   |   ✅   |           |              |       |
+|                                                         | [Help Docs](https://repolense-merge-docs.khulnasoft.com/tools/help_docs/?h=auto#auto-approval)     |   ✅   |   ✅   |    ✅     |              |       |
+|                                                         | [Update CHANGELOG](https://repolense-merge-docs.khulnasoft.com/tools/update_changelog/)            |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         |                                                                                                                     |        |        |           |              |       |
+| [USAGE](https://repolense-merge-docs.khulnasoft.com/usage-guide/)   | [CLI](https://repolense-merge-docs.khulnasoft.com/usage-guide/automations_and_usage/#local-repo-cli)                            |   ✅   |   ✅   |    ✅     |      ✅      |  ✅   |
+|                                                         | [App / webhook](https://repolense-merge-docs.khulnasoft.com/usage-guide/automations_and_usage/#github-app)                      |   ✅   |   ✅   |    ✅     |      ✅      |  ✅   |
+|                                                         | [Tagging bot](https://github.com/khulnasoft/pr-insight#try-it-now)                                                     |   ✅   |        |           |              |       |
+|                                                         | [Actions](https://repolense-merge-docs.khulnasoft.com/installation/github/#run-as-a-github-action)                              |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         |                                                                                                                     |        |        |           |              |       |
+| [CORE](https://repolense-merge-docs.khulnasoft.com/core-abilities/) | [Adaptive and token-aware file patch fitting](https://repolense-merge-docs.khulnasoft.com/core-abilities/compression_strategy/) |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         | [Chat on code suggestions](https://repolense-merge-docs.khulnasoft.com/core-abilities/chat_on_code_suggestions/)                |   ✅   |  ✅   |           |              |       |
+|                                                         | [Dynamic context](https://repolense-merge-docs.khulnasoft.com/core-abilities/dynamic_context/)                                  |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         | [Fetching ticket context](https://repolense-merge-docs.khulnasoft.com/core-abilities/fetching_ticket_context/)                  |   ✅    |  ✅    |     ✅     |              |       |
+|                                                         | [Incremental Update](https://repolense-merge-docs.khulnasoft.com/core-abilities/incremental_update/)                            |   ✅    |       |           |              |       |
+|                                                         | [Interactivity](https://repolense-merge-docs.khulnasoft.com/core-abilities/interactivity/)                                      |   ✅   |  ✅   |           |              |       |
+|                                                         | [Local and global metadata](https://repolense-merge-docs.khulnasoft.com/core-abilities/metadata/)                               |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         | [Multiple models support](https://repolense-merge-docs.khulnasoft.com/usage-guide/changing_a_model/)                            |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         | [PR compression](https://repolense-merge-docs.khulnasoft.com/core-abilities/compression_strategy/)                              |   ✅   |   ✅   |    ✅     |      ✅      |       |
+|                                                         | [RAG context enrichment](https://repolense-merge-docs.khulnasoft.com/core-abilities/rag_context_enrichment/)                    |   ✅    |       |    ✅     |              |       |
+|                                                         | [Self reflection](https://repolense-merge-docs.khulnasoft.com/core-abilities/self_reflection/)                                  |   ✅   |   ✅   |    ✅     |      ✅      |       |
 
 [//]: # (- Support for additional git providers is described in [here]&#40;./docs/Full_environments.md&#41;)
 ___
 
-‣ **Auto Description ([`/describe`](https://khulnasoft.github.io/pr-insight/tools/describe/))**: Automatically generating PR description - title, type, summary, code walkthrough and labels.
-\
-‣ **Auto Review ([`/review`](https://khulnasoft.github.io/pr-insight/tools/review/))**: Adjustable feedback about the PR, possible issues, security concerns, review effort and more.
-\
-‣ **Code Suggestions ([`/improve`](https://khulnasoft.github.io/pr-insight/tools/improve/))**: Code suggestions for improving the PR.
-\
-‣ **Question Answering ([`/ask ...`](https://khulnasoft.github.io/pr-insight/tools/ask/))**: Answering free-text questions about the PR.
-\
-‣ **Update Changelog ([`/update_changelog`](https://khulnasoft.github.io/pr-insight/tools/update_changelog/))**: Automatically updating the CHANGELOG.md file with the PR changes.
-\
-‣ **Find Similar Issue ([`/similar_issue`](https://khulnasoft.github.io/pr-insight/tools/similar_issues/))**: Automatically retrieves and presents similar issues.
-\
-‣ **Add Documentation 💎  ([`/add_docs`](https://khulnasoft.github.io/pr-insight/tools/documentation/))**: Generates documentation to methods/functions/classes that changed in the PR.
-\
-‣ **Generate Custom Labels 💎 ([`/generate_labels`](https://khulnasoft.github.io/pr-insight/tools/custom_labels/))**: Generates custom labels for the PR, based on specific guidelines defined by the user.
-\
-‣ **Analyze 💎 ([`/analyze`](https://khulnasoft.github.io/pr-insight/tools/analyze/))**: Identify code components that changed in the PR, and enables to interactively generate tests, docs, and code suggestions for each component.
-\
-‣ **Custom Prompt 💎 ([`/custom_prompt`](https://khulnasoft.github.io/pr-insight/tools/custom_prompt/))**: Automatically generates custom suggestions for improving the PR code, based on specific guidelines defined by the user.
-\
-‣ **Generate Tests 💎 ([`/test component_name`](https://khulnasoft.github.io/pr-insight/tools/test/))**: Generates unit tests for a selected component, based on the PR code changes.
-\
-‣ **CI Feedback 💎 ([`/checks ci_job`](https://khulnasoft.github.io/pr-insight/tools/ci_feedback/))**: Automatically generates feedback and analysis for a failed CI job.
-\
-‣ **Similar Code 💎 ([`/find_similar_component`](https://khulnasoft.github.io/pr-insight/tools/similar_code/))**: Retrieves the most similar code components from inside the organization's codebase, or from open-source code.
-___
+## See It in Action
 
-## Try it now
+</div>
+<h4><a href="https://github.com/khulnasoft/pr-insight/pull/530">/describe</a></h4>
+<div align="center">
+<p float="center">
+<img src="https://www.khulnasoft.com/images/pr_insight/describe_new_short_main.png" width="512">
+</p>
+</div>
+<hr>
 
-Try the GPT-4 powered PR-Insight instantly on _your public GitHub repository_. Just mention `@KhulnaSoft` and add the desired command in any PR comment. The insight will generate a response based on your command.
+<h4><a href="https://github.com/khulnasoft/pr-insight/pull/732#issuecomment-1975099151">/review</a></h4>
+<div align="center">
+<p float="center">
+<kbd>
+<img src="https://www.khulnasoft.com/images/pr_insight/review_new_short_main.png" width="512">
+</kbd>
+</p>
+</div>
+<hr>
+
+<h4><a href="https://github.com/khulnasoft/pr-insight/pull/732#issuecomment-1975099159">/improve</a></h4>
+<div align="center">
+<p float="center">
+<kbd>
+<img src="https://www.khulnasoft.com/images/pr_insight/improve_new_short_main.png" width="512">
+</kbd>
+</p>
+</div>
+
+<div align="left">
+
+</div>
+<hr>
+
+## Try It Now
+
+Try the GPT-5 powered PR-Insight instantly on _your public GitHub repository_. Just mention `@KhulnaSoft-Agent` and add the desired command in any PR comment. The agent will generate a response based on your command.
 For example, add a comment to any pull request with the following text:
+
 ```
-@KhulnaSoft /review
+@KhulnaSoft-Agent /review
 ```
-and the insight will respond with a review of your PR
+
+and the agent will respond with a review of your PR.
+
+Note that this is a promotional bot, suitable only for initial experimentation.
+It does not have 'edit' access to your repo, for example, so it cannot update the PR description or add labels (`@KhulnaSoft-Agent /describe` will publish PR description as a comment). In addition, the bot cannot be used on private repositories, as it does not have access to the files there.
 
 
-To set up your own PR-Insight, see the [Installation](https://khulnasoft.github.io/pr-insight/installation/) section below.
-Note that when you set your own PR-Insight or use KhulnaSoft hosted PR-Insight, there is no need to mention `@KhulnaSoft ...`. Instead, directly start with the command, e.g., `/ask ...`.
+## How It Works
 
----
+The following diagram illustrates PR-Insight tools and their flow:
 
-[//]: # (## Installation)
+![PR-Insight Tools](https://www.khulnasoft.com/images/pr_insight/diagram-v0.9.png)
 
-[//]: # (To use your own version of PR-Insight, you first need to acquire two tokens:)
-
-[//]: # ()
-[//]: # (1. An OpenAI key from [here]&#40;https://platform.openai.com/&#41;, with access to GPT-4.)
-
-[//]: # (2. A GitHub personal access token &#40;classic&#41; with the repo scope.)
-
-[//]: # ()
-[//]: # (There are several ways to use PR-Insight:)
-
-[//]: # ()
-[//]: # (**Locally**)
-
-[//]: # (- [Using pip package]&#40;https://khulnasoft.github.io/pr-insight/installation/locally/#using-pip-package&#41;)
-
-[//]: # (- [Using Docker image]&#40;https://khulnasoft.github.io/pr-insight/installation/locally/#using-docker-image&#41;)
-
-[//]: # (- [Run from source]&#40;https://khulnasoft.github.io/pr-insight/installation/locally/#run-from-source&#41;)
-
-[//]: # ()
-[//]: # (**GitHub specific methods**)
-
-[//]: # (- [Run as a GitHub Insight]&#40;https://khulnasoft.github.io/pr-insight/installation/github/#run-as-a-github-insight&#41;)
-
-[//]: # (- [Run as a GitHub App]&#40;https://khulnasoft.github.io/pr-insight/installation/github/#run-as-a-github-app&#41;)
-
-[//]: # ()
-[//]: # (**GitLab specific methods**)
-
-[//]: # (- [Run a GitLab webhook server]&#40;https://khulnasoft.github.io/pr-insight/installation/gitlab/&#41;)
-
-[//]: # ()
-[//]: # (**BitBucket specific methods**)
-
-[//]: # (- [Run as a Bitbucket Pipeline]&#40;https://khulnasoft.github.io/pr-insight/installation/bitbucket/&#41;)
-
-## PR-Insight Pro 💎
-[PR-Insight Pro](https://www.khulnasoft.com/pricing/) is a hosted version of PR-Insight, provided by KhulnaSoft. It is available for a monthly fee, and provides the following benefits:
-1. **Fully managed** - We take care of everything for you - hosting, models, regular updates, and more. Installation is as simple as signing up and adding the PR-Insight app to your GitHub\GitLab\BitBucket repo.
-2. **Improved privacy** - No data will be stored or used to train models. PR-Insight Pro will employ zero data retention, and will use an OpenAI account with zero data retention.
-3. **Improved support** - PR-Insight Pro users will receive priority support, and will be able to request new features and capabilities.
-4. **Extra features** -In addition to the benefits listed above, PR-Insight Pro will emphasize more customization, and the usage of static code analysis, in addition to LLM logic, to improve results.
-See [here](https://khulnasoft.github.io/pr-insight/#pr-insight-pro) for a list of features available in PR-Insight Pro.
-
-
-
-## Why use PR-Insight?
-
-A reasonable question that can be asked is: `"Why use PR-Insight? What makes it stand out from existing tools?"`
-
-Here are some advantages of PR-Insight:
-
-- We emphasize **real-life practical usage**. Each tool (review, improve, ask, ...) has a single GPT-4 call, no more. We feel that this is critical for realistic team usage - obtaining an answer quickly (~30 seconds) and affordably.
-- Our [PR Compression strategy](https://khulnasoft.github.io/pr-insight/core-abilities/#pr-compression-strategy)  is a core ability that enables to effectively tackle both short and long PRs.
-- Our JSON prompting strategy enables to have **modular, customizable tools**. For example, the '/review' tool categories can be controlled via the [configuration](pr_insight/settings/configuration.toml) file. Adding additional categories is easy and accessible.
-- We support **multiple git providers** (GitHub, Gitlab, Bitbucket), **multiple ways** to use the tool (CLI, GitHub Insight, GitHub App, Docker, ...), and **multiple models** (GPT-4, GPT-3.5, Anthropic, Cohere, Llama2).
-
-
-## Data privacy
+## Data Privacy
 
 ### Self-hosted PR-Insight
 
 - If you host PR-Insight with your OpenAI API key, it is between you and OpenAI. You can read their API data privacy policy here:
 https://openai.com/enterprise-privacy
 
-### KhulnaSoft-hosted PR-Insight Pro 💎
 
-- When using PR-Insight Pro 💎, hosted by KhulnaSoft, we will not store any of your data, nor will we use it for training. You will also benefit from an OpenAI account with zero data retention.
-
-- For certain clients, KhulnaSoft-hosted PR-Insight Pro will use KhulnaSoft’s proprietary models — if this is the case, you will be notified.
-
-- No passive collection of Code and Pull Requests’ data — PR-Insight will be active only when you invoke it, and it will then extract and analyze only data relevant to the executed command and queried pull request.
-
-### PR-Insight Chrome extension
-
-- The [PR-Insight Chrome extension](https://chromewebstore.google.com/detail/pr-insight-chrome-extension/ephlnjeghhogofkifjloamocljapahnl) serves solely to modify the visual appearance of a GitHub PR screen. It does not transmit any user's repo or pull request code. Code is only sent for processing when a user submits a GitHub comment that activates a PR-Insight tool, in accordance with the standard privacy policy of PR-Insight.
-
-## Links
-
-- Discord community: https://discord.gg/NfDj6xsR
-- KhulnaSoft site: https://khulnasoft.com
-- Blog: https://www.khulnasoft.com/blog/
-- Troubleshooting: https://www.khulnasoft.com/blog/technical-faq-and-troubleshooting/
-- Support: support@khulnasoft.com

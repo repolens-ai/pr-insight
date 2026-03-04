@@ -19,5 +19,5 @@ def main():
     cli.run_command(pr_url, command)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

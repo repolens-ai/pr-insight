@@ -8,19 +8,22 @@ from pr_insight.git_providers.bitbucket_server_provider import \
 from pr_insight.git_providers.codecommit_provider import CodeCommitProvider
 from pr_insight.git_providers.gerrit_provider import GerritProvider
 from pr_insight.git_providers.git_provider import GitProvider
+from pr_insight.git_providers.gitea_provider import GiteaProvider
 from pr_insight.git_providers.github_provider import GithubProvider
 from pr_insight.git_providers.gitlab_provider import GitLabProvider
 from pr_insight.git_providers.local_git_provider import LocalGitProvider
+from pr_insight.git_providers.gitea_provider import GiteaProvider
 
 _GIT_PROVIDERS = {
-    "github": GithubProvider,
-    "gitlab": GitLabProvider,
-    "bitbucket": BitbucketProvider,
-    "bitbucket_server": BitbucketServerProvider,
-    "azure": AzureDevopsProvider,
-    "codecommit": CodeCommitProvider,
-    "local": LocalGitProvider,
-    "gerrit": GerritProvider,
+    'github': GithubProvider,
+    'gitlab': GitLabProvider,
+    'bitbucket': BitbucketProvider,
+    'bitbucket_server': BitbucketServerProvider,
+    'azure': AzureDevopsProvider,
+    'codecommit': CodeCommitProvider,
+    'local': LocalGitProvider,
+    'gerrit': GerritProvider,
+    'gitea': GiteaProvider
 }
 
 

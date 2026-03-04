@@ -7,8 +7,7 @@ from jinja2 import Environment, StrictUndefined
 
 from pr_insight.algo.ai_handlers.base_ai_handler import BaseAiHandler
 from pr_insight.algo.ai_handlers.litellm_ai_handler import LiteLLMAIHandler
-from pr_insight.algo.pr_processing import (get_pr_diff,
-                                           retry_with_fallback_models)
+from pr_insight.algo.pr_processing import get_pr_diff, retry_with_fallback_models
 from pr_insight.algo.token_handler import TokenHandler
 from pr_insight.algo.utils import get_user_labels, load_yaml, set_custom_labels
 from pr_insight.config_loader import get_settings
@@ -18,7 +17,8 @@ from pr_insight.log import get_logger
 
 
 class PRGenerateLabels:
-    def __init__(self, pr_url: str, args: list = None, ai_handler: partial[BaseAiHandler,] = LiteLLMAIHandler):
+    def __init__(self, pr_url: str, args: list = None,
+                 ai_handler: partial[BaseAiHandler,] = LiteLLMAIHandler):
         """
         Initialize the PRGenerateLabels object with the necessary attributes and objects for generating labels
         corresponding to the PR using an AI model.
@@ -28,7 +28,9 @@ class PRGenerateLabels:
         """
         # Initialize the git provider and main PR language
         self.git_provider = get_git_provider()(pr_url)
-        self.main_pr_language = get_main_pr_language(self.git_provider.get_languages(), self.git_provider.get_files())
+        self.main_pr_language = get_main_pr_language(
+            self.git_provider.get_languages(), self.git_provider.get_files()
+        )
         self.pr_id = self.git_provider.get_pr_id()
 
         # Initialize the AI handler
@@ -90,7 +92,7 @@ class PRGenerateLabels:
                 if self.git_provider.is_supported("get_labels"):
                     self.git_provider.publish_labels(pr_labels)
                 elif pr_labels:
-                    value = ", ".join(v for v in pr_labels)
+                    value = ', '.join(v for v in pr_labels)
                     pr_labels_text = f"## PR Labels:\n{value}\n"
                     self.git_provider.publish_comment(pr_labels_text, is_temporary=False)
                 self.git_provider.remove_initial_comment()
@@ -139,7 +141,12 @@ class PRGenerateLabels:
         system_prompt = environment.from_string(get_settings().pr_custom_labels_prompt.system).render(self.variables)
         user_prompt = environment.from_string(get_settings().pr_custom_labels_prompt.user).render(self.variables)
 
-        response, finish_reason = await self.ai_handler.chat_completion(model=model, temperature=get_settings().config.temperature, system=system_prompt, user=user_prompt)
+        response, finish_reason = await self.ai_handler.chat_completion(
+            model=model,
+            temperature=get_settings().config.temperature,
+            system=system_prompt,
+            user=user_prompt
+        )
 
         return response
 
@@ -147,15 +154,17 @@ class PRGenerateLabels:
         # Load the AI prediction data into a dictionary
         self.data = load_yaml(self.prediction.strip())
 
+
+
     def _prepare_labels(self) -> List[str]:
         pr_types = []
 
         # If the 'labels' key is present in the dictionary, split its value by comma and assign it to 'pr_types'
-        if "labels" in self.data:
-            if type(self.data["labels"]) == list:
-                pr_types = self.data["labels"]
-            elif type(self.data["labels"]) == str:
-                pr_types = self.data["labels"].split(",")
+        if 'labels' in self.data:
+            if type(self.data['labels']) == list:
+                pr_types = self.data['labels']
+            elif type(self.data['labels']) == str:
+                pr_types = self.data['labels'].split(',')
         pr_types = [label.strip() for label in pr_types]
 
         # convert lowercase labels to original case

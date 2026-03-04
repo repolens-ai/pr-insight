@@ -23,7 +23,6 @@ jobs:
         uses: khulnasoft/pr-insight@main
         env:
           OPENAI_KEY: ${{ secrets.OPENAI_KEY }}
-          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_TOKEN }}
           OPENAI_ORG: ${{ secrets.OPENAI_ORG }} # optional
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PINECONE.API_KEY: ${{ secrets.PINECONE_API_KEY }}

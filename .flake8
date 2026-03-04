@@ -1,4 +1,0 @@
-artifact: .flake8
-[flake8]
-max-line-length = 209
-extend-ignore = F541, F401, E721, E722, E713, E711, B904, B007, F821, E501

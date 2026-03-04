@@ -1,0 +1,38 @@
+{
+  "name": "Repolens Merge",
+  "description": "Repolens Merge",
+  "key": "app_key",
+  "vendor": {
+    "name": "Repolens",
+    "url": "https://khulnasoft.com"
+  },
+  "authentication": {
+    "type": "jwt"
+  },
+  "baseUrl": "base_url",
+  "lifecycle": {
+    "installed": "/installed",
+    "uninstalled": "/uninstalled"
+  },
+  "scopes": [
+    "account",
+    "repository:write",
+    "pullrequest:write",
+    "wiki"
+  ],
+  "contexts": [
+    "account"
+  ],
+  "modules": {
+    "webhooks": [
+      {
+        "event": "*",
+        "url": "/webhook"
+      }
+    ]
+  },
+  "links": {
+    "privacy": "https://khulnasoft.com/privacy-policy",
+    "terms": "https://khulnasoft.com/terms"
+  }
+}

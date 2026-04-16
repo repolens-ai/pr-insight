@@ -41,10 +41,11 @@ FROM base AS gitea_app
 ADD pr_insight pr_insight
 CMD ["python", "-m", "gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-c", "pr_insight/servers/gunicorn_config.py","pr_insight.servers.gitea_app:app"]
 
-
 FROM base AS test
+ADD requirements.txt .
+RUN uv pip install --system -r requirements.txt && rm requirements.txt
 ADD requirements-dev.txt .
-RUN uv pip install -r requirements-dev.txt --frozen && rm requirements-dev.txt
+RUN uv pip install --system -r requirements-dev.txt && rm requirements-dev.txt
 ADD pr_insight pr_insight
 ADD tests tests
 

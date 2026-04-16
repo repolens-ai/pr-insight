@@ -118,8 +118,8 @@ use_conversation_history=true
 
 
 [pr_code_suggestions] # /improve #
-commitable_code_suggestions = false
-dual_publishing_score_threshold=-1 # -1 to disable, [0-10] to set the threshold (>=) for publishing a code suggestion both in a table and as commitable
+committable_code_suggestions = false
+dual_publishing_score_threshold=-1 # -1 to disable, [0-10] to set the threshold (>=) for publishing a code suggestion both in a table and as committable
 focus_only_on_problems=true
 #
 extra_instructions = ""
@@ -276,7 +276,7 @@ push_commands = [
 pr_commands = [
     "/describe --pr_description.final_update_message=false",
     "/review",
-    "/improve --pr_code_suggestions.commitable_code_suggestions=true",
+    "/improve --pr_code_suggestions.committable_code_suggestions=true",
 ]
 avoid_full_files = false
 
@@ -302,7 +302,7 @@ url = ""
 pr_commands = [
     "/describe --pr_description.final_update_message=false",
     "/review",
-    "/improve --pr_code_suggestions.commitable_code_suggestions=true",
+    "/improve --pr_code_suggestions.committable_code_suggestions=true",
 ]
 
 [litellm]

@@ -33,14 +33,18 @@ PR-Insight automates AI-assisted reviews for pull requests across multiple git p
   ```
 - Run a single unit test: `PYTHONPATH=. .venv/bin/pytest tests/unittest/test_fix_json_escape_char.py -q`.
 - Run the full unit suite: `PYTHONPATH=. .venv/bin/pytest tests/unittest -v`.
+- Run linter: `ruff check .`
+- Run formatter: `ruff format .`
+- Run type checker: `mypy pr_insight/`
+- Run full verification: `ruff check . && ruff format --check . && mypy pr_insight/ && PYTHONPATH=. .venv/bin/pytest tests/unittest -v`
 - Execute the CLI locally once dependencies and API keys are available: `python -m pr_insight.cli --pr_url <https://host/org/repo/pull/123> review`.
-- Build the test Docker target mirror of CI when containerizing: `docker build -f docker/Dockerfile --target test .` (loads dev dependencies and copies `tests/`).
+- Build and run tests in Docker (mirrors CI): `docker build -f docker/Dockerfile --target test . -t pr-insight:test && docker run --rm pr-insight:test pytest -v tests/unittest`. Other targets: `docker build --target cli .`, `docker build --target github_app .`, `docker build --target gitlab_webhook .`, etc.
 - Generate and deploy documentation with MkDocs after installing the same extras as CI (`mkdocs-material`, `mkdocs-glightbox`): `mkdocs serve -f docs/mkdocs.yml` for previews and `mkdocs gh-deploy -f docs/mkdocs.yml` for publication.
 
 ## Coding Style and Naming Conventions
 
 - Python sources follow the Ruff configuration in `pyproject.toml` (`line-length = 120`, Pyflakes plus `flake8-bugbear` checks, and isort ordering). Keep imports grouped as isort would produce and prefer double quotes for strings.
-- Pre-commit (`.pre-commit-config.yaml`) enforces trailing whitespace cleanup, final newlines, TOML/YAML validity, and optional `isort`; run `pre-commit run --all-files` before submitting patches if installed.
+- Pre-commit (`.pre-commit-config.yaml`) enforces: trailing whitespace cleanup, final newlines, TOML/YAML validity, and isort. Other hooks (ruff, bandit, actionlint) are commented out. Run `pre-commit run --all-files` before submitting patches if installed.
 - Match existing docstring and comment style—concise English comments using imperative phrasing only where necessary.
 - Configuration files in `pr_insight/settings/` are TOML; preserve formatting, section order, and comments when editing prompts or defaults.
 - Markdown in `docs/` uses MkDocs conventions (YAML front matter absent; rely on heading hierarchy already in place).
@@ -58,7 +62,7 @@ PR-Insight automates AI-assisted reviews for pull requests across multiple git p
 - Follow `CONTRIBUTING.md`: keep changes focused, add or update tests, and use Conventional Commit-style messages (e.g., `fix: handle missing repo settings gracefully`).
 - Target branch names follow `feature/<name>` or `fix/<issue>` patterns for substantial work.
 - Reference related issues and update README or docs when user-facing behavior shifts.
-- Ensure CI workflows (`build-and-test`, `code-coverage`, `docs-ci`) succeed locally or in draft PRs before requesting review; reproduce failures with the documented commands above.
+- Ensure CI workflows (`build-and-test.yaml`, `code-coverage.yaml`, `docs-ci.yaml`) succeed locally or in draft PRs before requesting review; reproduce failures with the documented commands above.
 - Include screenshots or terminal captures when modifying user-visible output or documentation previews.
 
 ## Safety and Permissions

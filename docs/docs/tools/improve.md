@@ -32,7 +32,7 @@ To edit [configurations](#configuration-options) related to the `improve` tool, 
 For example, you can choose to present all the suggestions as committable code comments, by running the following command:
 
 ```toml
-/improve --pr_code_suggestions.commitable_code_suggestions=true
+/improve --pr_code_suggestions.committable_code_suggestions=true
 ```
 
 ![improve](https://khulnasoft.com/images/pr_insight/improve.png){width=512}
@@ -197,7 +197,7 @@ In such cases, we recommend prioritizing the suggestion's detailed description, 
 
 ### Dual publishing mode
 
-Our recommended approach for presenting code suggestions is through a [table](./improve.md#overview) (`--pr_code_suggestions.commitable_code_suggestions=false`).
+Our recommended approach for presenting code suggestions is through a [table](./improve.md#overview) (`--pr_code_suggestions.committable_code_suggestions=false`).
 This method significantly reduces the PR footprint and allows for quick and easy digestion of multiple suggestions.
 
 We also offer a complementary **dual publishing mode**. When enabled, suggestions exceeding a certain score threshold are not only displayed in the table, but also presented as committable PR comments.
@@ -289,7 +289,7 @@ Note: Chunking is primarily relevant for large PRs. For most PRs (up to 600 line
         <td>Optional extra instructions to the tool. For example: "focus on the changes in the file X. Ignore change in ...".</td>
       </tr>
       <tr>
-        <td><b>commitable_code_suggestions</b></td>
+        <td><b>committable_code_suggestions</b></td>
         <td>If set to true, the tool will display the suggestions as committable code comments. Default is false.</td>
       </tr>
       <tr>

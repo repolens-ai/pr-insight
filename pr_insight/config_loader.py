@@ -5,42 +5,51 @@ from typing import Optional
 from dynaconf import Dynaconf
 from starlette_context import context
 
-PR_INSIGHT_TOML_KEY = 'pr-insight'
+PR_INSIGHT_TOML_KEY = "pr-insight"
 
 current_dir = dirname(abspath(__file__))
 
-dynconf_kwargs = {'core_loaders': [], # DISABLE default loaders, otherwise will load toml files more than once.
-                           'loaders': ['pr_insight.custom_merge_loader', 'dynaconf.loaders.env_loader'], # Use a custom loader to merge sections, but overwrite their overlapping values. Also support ENV variables to take precedence.
-                           'root_path': join(current_dir, "settings"), #Used for Dynaconf.find_file() - So that root path points to settings folder, since we disabled all core loaders.
-                           'merge_enabled': True  # In case more than one file is sent, merge them. Must be set to True, otherwise, a .toml file with section [XYZ] overwrites the entire section of a previous .toml file's [XYZ] and we want it to only overwrite the overlapping fields under such section
-                           }
+dynconf_kwargs = {
+    "core_loaders": [],  # DISABLE default loaders, otherwise will load toml files more than once.
+    "loaders": [
+        "pr_insight.custom_merge_loader",
+        "dynaconf.loaders.env_loader",
+    ],  # Use a custom loader to merge sections, but overwrite their overlapping values. Also support ENV variables to take precedence.
+    "root_path": join(
+        current_dir, "settings"
+    ),  # Used for Dynaconf.find_file() - So that root path points to settings folder, since we disabled all core loaders.
+    "merge_enabled": True,  # In case more than one file is sent, merge them. Must be set to True, otherwise, a .toml file with section [XYZ] overwrites the entire section of a previous .toml file's [XYZ] and we want it to only overwrite the overlapping fields under such section
+}
 global_settings = Dynaconf(
     envvar_prefix=False,
     load_dotenv=False,  # Security: Don't load .env files
-    settings_files=[join(current_dir, f) for f in [
-        "settings/configuration.toml",
-        "settings/ignore.toml",
-        "settings/generated_code_ignore.toml",
-        "settings/language_extensions.toml",
-        "settings/pr_reviewer_prompts.toml",
-        "settings/pr_questions_prompts.toml",
-        "settings/pr_line_questions_prompts.toml",
-        "settings/pr_description_prompts.toml",
-        "settings/code_suggestions/pr_code_suggestions_prompts.toml",
-        "settings/code_suggestions/pr_code_suggestions_prompts_not_decoupled.toml",
-        "settings/code_suggestions/pr_code_suggestions_reflect_prompts.toml",
-        "settings/pr_information_from_user_prompts.toml",
-        "settings/pr_update_changelog_prompts.toml",
-        "settings/pr_custom_labels.toml",
-        "settings/pr_add_docs.toml",
-        "settings/custom_labels.toml",
-        "settings/pr_help_prompts.toml",
-        "settings/pr_help_docs_prompts.toml",
-        "settings/pr_help_docs_headings_prompts.toml",
-        "settings/.secrets.toml",
-        "settings_prod/.secrets.toml",
-    ]],
-    **dynconf_kwargs
+    settings_files=[
+        join(current_dir, f)
+        for f in [
+            "settings/configuration.toml",
+            "settings/ignore.toml",
+            "settings/generated_code_ignore.toml",
+            "settings/language_extensions.toml",
+            "settings/pr_reviewer_prompts.toml",
+            "settings/pr_questions_prompts.toml",
+            "settings/pr_line_questions_prompts.toml",
+            "settings/pr_description_prompts.toml",
+            "settings/code_suggestions/pr_code_suggestions_prompts.toml",
+            "settings/code_suggestions/pr_code_suggestions_prompts_not_decoupled.toml",
+            "settings/code_suggestions/pr_code_suggestions_reflect_prompts.toml",
+            "settings/pr_information_from_user_prompts.toml",
+            "settings/pr_update_changelog_prompts.toml",
+            "settings/pr_custom_labels.toml",
+            "settings/pr_add_docs.toml",
+            "settings/custom_labels.toml",
+            "settings/pr_help_prompts.toml",
+            "settings/pr_help_docs_prompts.toml",
+            "settings/pr_help_docs_headings_prompts.toml",
+            "settings/.secrets.toml",
+            "settings_prod/.secrets.toml",
+        ]
+    ],
+    **dynconf_kwargs,
 )
 
 
@@ -88,7 +97,37 @@ def _find_pyproject() -> Optional[Path]:
 
 pyproject_path = _find_pyproject()
 if pyproject_path is not None:
-    get_settings().load_file(pyproject_path, env=f'tool.{PR_INSIGHT_TOML_KEY}')
+    get_settings().load_file(pyproject_path, env=f"tool.{PR_INSIGHT_TOML_KEY}")
+
+
+def _find_pr_insight_toml() -> Optional[Path]:
+    """Find .pr_insight.toml in current working directory or ancestor directories."""
+    cwd = Path.cwd().resolve()
+    no_way_up = False
+    while not no_way_up:
+        no_way_up = cwd == cwd.parent
+        toml_path = cwd / ".pr_insight.toml"
+        if toml_path.is_file():
+            return toml_path
+        cwd = cwd.parent
+    return None
+
+
+pr_insight_toml_path = _find_pr_insight_toml()
+if pr_insight_toml_path is not None:
+    try:
+        with open(pr_insight_toml_path, "rb") as f:
+            import tomllib
+
+            data = tomllib.load(f)
+        if "config" in data and "git_provider" in data["config"]:
+            get_settings().set("CONFIG.GIT_PROVIDER", data["config"]["git_provider"], merge=True)
+        if "github" in data and "user_token" in data["github"]:
+            get_settings().set("GITHUB.USER_TOKEN", data["github"]["user_token"], merge=True)
+        if "openai" in data and "key" in data["openai"]:
+            get_settings().set("OPENAI.API_KEY", data["openai"]["key"], merge=True)
+    except Exception as e:
+        pass
 
 
 def apply_secrets_manager_config():
@@ -104,8 +143,10 @@ def apply_secrets_manager_config():
         if not secret_provider:
             return
 
-        if (hasattr(secret_provider, 'get_all_secrets') and
-            get_settings().get("CONFIG.SECRET_PROVIDER") == 'aws_secrets_manager'):
+        if (
+            hasattr(secret_provider, "get_all_secrets")
+            and get_settings().get("CONFIG.SECRET_PROVIDER") == "aws_secrets_manager"
+        ):
             try:
                 secrets = secret_provider.get_all_secrets()
                 if secrets:
@@ -116,6 +157,7 @@ def apply_secrets_manager_config():
     except Exception as e:
         try:
             from pr_insight.log import get_logger
+
             get_logger().debug(f"Secret provider not configured: {e}")
         except:
             # Fail completely silently if log module is not available
@@ -130,14 +172,17 @@ def apply_secrets_to_config(secrets: dict):
         # Dynamic import to avoid potential circular dependency
         from pr_insight.log import get_logger
     except:
+
         def get_logger():
             class DummyLogger:
-                def debug(self, msg): pass
+                def debug(self, msg):
+                    pass
+
             return DummyLogger()
 
     for key, value in secrets.items():
-        if '.' in key:  # nested key like "openai.key"
-            parts = key.split('.')
+        if "." in key:  # nested key like "openai.key"
+            parts = key.split(".")
             if len(parts) == 2:
                 section, setting = parts
                 section_upper = section.upper()

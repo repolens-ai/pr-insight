@@ -73,10 +73,8 @@ class CodeCommitProvider(GitProvider):
     def is_supported(self, capability: str) -> bool:
         if capability in [
             "get_issue_comments",
-            "create_inline_comment",
-            "publish_inline_comments",
             "get_labels",
-            "gfm_markdown"
+            "gfm_markdown",
         ]:
             return False
         return True
@@ -91,13 +89,19 @@ class CodeCommitProvider(GitProvider):
             return self.git_files
 
         self.git_files = []
-        differences = self.codecommit_client.get_differences(self.repo_name, self.pr.destination_commit, self.pr.source_commit)
+        differences = self.codecommit_client.get_differences(
+            self.repo_name, self.pr.destination_commit, self.pr.source_commit
+        )
         for item in differences:
-            self.git_files.append(CodeCommitFile(item.before_blob_path,
-                                                 item.before_blob_id,
-                                                 item.after_blob_path,
-                                                 item.after_blob_id,
-                                                 CodeCommitProvider._get_edit_type(item.change_type)))
+            self.git_files.append(
+                CodeCommitFile(
+                    item.before_blob_path,
+                    item.before_blob_id,
+                    item.after_blob_path,
+                    item.after_blob_id,
+                    CodeCommitProvider._get_edit_type(item.change_type),
+                )
+            )
         return self.git_files
 
     def get_diff_files(self) -> list[FilePatchInfo]:
@@ -121,7 +125,8 @@ class CodeCommitProvider(GitProvider):
             if diff_item.a_blob_id is not None:
                 patch_filename = diff_item.a_path
                 original_file_content_str = self.codecommit_client.get_file(
-                    self.repo_name, diff_item.a_path, self.pr.destination_commit)
+                    self.repo_name, diff_item.a_path, self.pr.destination_commit
+                )
                 if isinstance(original_file_content_str, (bytes, bytearray)):
                     original_file_content_str = original_file_content_str.decode("utf-8")
             else:
@@ -129,7 +134,9 @@ class CodeCommitProvider(GitProvider):
 
             if diff_item.b_blob_id is not None:
                 patch_filename = diff_item.b_path
-                new_file_content_str = self.codecommit_client.get_file(self.repo_name, diff_item.b_path, self.pr.source_commit)
+                new_file_content_str = self.codecommit_client.get_file(
+                    self.repo_name, diff_item.b_path, self.pr.source_commit
+                )
                 if isinstance(new_file_content_str, (bytes, bytearray)):
                     new_file_content_str = new_file_content_str.decode("utf-8")
             else:
@@ -144,9 +151,7 @@ class CodeCommitProvider(GitProvider):
                 patch,
                 diff_item.b_path,
                 edit_type=diff_item.edit_type,
-                old_filename=None
-                if diff_item.a_path == diff_item.b_path
-                else diff_item.a_path,
+                old_filename=None if diff_item.a_path == diff_item.b_path else diff_item.a_path,
             )
             # Only add valid files to the diff list
             # "bad extensions" are set in the language_extensions.toml file
@@ -190,12 +195,16 @@ class CodeCommitProvider(GitProvider):
         for suggestion in code_suggestions:
             # Verify that each suggestion has the required keys
             if not all(key in suggestion for key in ["body", "relevant_file", "relevant_lines_start"]):
-                get_logger().warning(f"Skipping code suggestion #{counter}: Each suggestion must have 'body', 'relevant_file', 'relevant_lines_start' keys")
+                get_logger().warning(
+                    f"Skipping code suggestion #{counter}: Each suggestion must have 'body', 'relevant_file', 'relevant_lines_start' keys"
+                )
                 continue
 
             # Publish the code suggestion to CodeCommit
             try:
-                get_logger().debug(f"Code Suggestion #{counter} in file: {suggestion['relevant_file']}: {suggestion['relevant_lines_start']}")
+                get_logger().debug(
+                    f"Code Suggestion #{counter} in file: {suggestion['relevant_file']}: {suggestion['relevant_lines_start']}"
+                )
                 self.codecommit_client.publish_comment(
                     repo_name=self.repo_name,
                     pr_number=self.pr_num,
@@ -221,18 +230,82 @@ class CodeCommitProvider(GitProvider):
     def get_pr_labels(self, update=False):
         return [""]  # not implemented yet
 
+    def create_inline_comment(
+        self, body: str, relevant_file: str, relevant_line_in_file: str, absolute_position: int = None
+    ):
+        try:
+            line_num = int(relevant_line_in_file) if relevant_line_in_file else None
+            if line_num is None:
+                get_logger().warning(f"Could not parse line number for {relevant_file} {relevant_line_in_file}")
+                return {}
+            return {
+                "body": body,
+                "relevant_file": relevant_file,
+                "relevant_line_in_file": str(line_num),
+            }
+        except ValueError:
+            get_logger().warning(f"Invalid line number: {relevant_line_in_file}")
+            return {}
+
     def remove_initial_comment(self):
         return ""  # not implemented yet
 
     def remove_comment(self, comment):
         return ""  # not implemented yet
 
-    def publish_inline_comment(self, body: str, relevant_file: str, relevant_line_in_file: str, original_suggestion=None):
-        # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/codecommit/client/post_comment_for_compared_commit.html
-        raise NotImplementedError("CodeCommit provider does not support publishing inline comments yet")
+    def publish_inline_comment(
+        self, body: str, relevant_file: str, relevant_line_in_file: str, original_suggestion=None
+    ):
+        try:
+            line_num = int(relevant_line_in_file) if relevant_line_in_file else None
+            if line_num is None:
+                get_logger().warning(f"Could not parse line number for {relevant_file} {relevant_line_in_file}")
+                return
+            self.codecommit_client.publish_comment(
+                repo_name=self.repo_name,
+                pr_number=self.pr_num,
+                destination_commit=self.pr.destination_commit,
+                source_commit=self.pr.source_commit,
+                comment=body,
+                annotation_file=relevant_file,
+                annotation_line=line_num,
+            )
+        except Exception as e:
+            get_logger().error(f"Failed to publish inline comment, error: {e}")
+            raise e
 
     def publish_inline_comments(self, comments: list[dict]):
-        raise NotImplementedError("CodeCommit provider does not support publishing inline comments yet")
+        try:
+            for comment in comments:
+                if isinstance(comment, dict) and "body" in comment:
+                    relevant_file = comment.get("relevant_file", comment.get("file", ""))
+                    relevant_line = comment.get("relevant_line_in_file", comment.get("line", ""))
+                    try:
+                        line_num = int(relevant_line) if relevant_line else None
+                        if line_num and relevant_file:
+                            self.codecommit_client.publish_comment(
+                                repo_name=self.repo_name,
+                                pr_number=self.pr_num,
+                                destination_commit=self.pr.destination_commit,
+                                source_commit=self.pr.source_commit,
+                                comment=comment["body"],
+                                annotation_file=relevant_file,
+                                annotation_line=line_num,
+                            )
+                        else:
+                            self.codecommit_client.publish_comment(
+                                repo_name=self.repo_name,
+                                pr_number=self.pr_num,
+                                destination_commit=self.pr.destination_commit,
+                                source_commit=self.pr.source_commit,
+                                comment=comment["body"],
+                            )
+                    except ValueError:
+                        get_logger().warning(f"Skipping comment with invalid line number: {relevant_line}")
+            get_logger().info(f"Published {len(comments)} inline comments to PR {self.pr_num}")
+        except Exception as e:
+            get_logger().error(f"Failed to publish inline comments, error: {e}")
+            raise e
 
     def get_title(self):
         return self.pr.title
@@ -257,7 +330,7 @@ class CodeCommitProvider(GitProvider):
         - dict: A dictionary where each key is a language name and the corresponding value is the percentage of that language in the PR.
         """
         commit_files = self.get_files()
-        filenames = [ item.filename for item in commit_files ]
+        filenames = [item.filename for item in commit_files]
         extensions = CodeCommitProvider._get_file_extensions(filenames)
 
         # Calculate the percentage of each file extension in the PR
@@ -402,7 +475,7 @@ class CodeCommitProvider(GitProvider):
         Returns:
         - str: the PR body with the double newlines added
         """
-        return re.sub(r'(?<!\n)\n(?!\n)', '\n\n', body)
+        return re.sub(r"(?<!\n)\n(?!\n)", "\n\n", body)
 
     @staticmethod
     def _remove_markdown_html(comment: str) -> str:
@@ -491,7 +564,5 @@ class CodeCommitProvider(GitProvider):
         # Identify language by file extension and count
         lang_count = Counter(extensions)
         # Convert counts to percentages
-        lang_percentage = {
-            lang: round(count / total_files * 100) for lang, count in lang_count.items()
-        }
+        lang_percentage = {lang: round(count / total_files * 100) for lang, count in lang_count.items()}
         return lang_percentage

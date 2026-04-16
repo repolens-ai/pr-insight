@@ -129,7 +129,7 @@ class PRCodeSuggestions:
                 self.git_provider.remove_initial_comment()
 
                 # Publish table summarized suggestions
-                if ((not get_settings().pr_code_suggestions.commitable_code_suggestions) and
+                if ((not get_settings().pr_code_suggestions.committable_code_suggestions) and
                         self.git_provider.is_supported("gfm_markdown")):
 
                     # generate summarized suggestions
@@ -466,7 +466,7 @@ class PRCodeSuggestions:
                     if suggestion['existing_code'] == suggestion['improved_code']:
                         get_logger().debug(
                             f"edited improved suggestion {i + 1}, because equal to existing code: {suggestion['existing_code']}")
-                        if get_settings().pr_code_suggestions.commitable_code_suggestions:
+                        if get_settings().pr_code_suggestions.committable_code_suggestions:
                             suggestion['improved_code'] = ""  # we need 'existing_code' to locate the code in the PR
                         else:
                             suggestion['existing_code'] = ""
